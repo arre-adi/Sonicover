@@ -1,0 +1,31 @@
+# Ignore all .iml files
+*.iml
+
+# Gradle files
+.gradle
+/local.properties
+
+# IntelliJ IDEA settings
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# macOS system files
+.DS_Store
+
+# Build output
+/build/
+/captures/
+/.externalNativeBuild/
+/.cxx/
+
+# Local configuration files
+local.properties
+config.properties
+
+# Ignore anything user-specific or environment-specific
+*.log
+*.tmp

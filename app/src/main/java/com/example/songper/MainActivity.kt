@@ -1,27 +1,40 @@
 package com.example.songper
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import com.example.songper.ViewModel.MainViewModel
+import com.example.songper.screens.App
 import com.example.songper.ui.theme.SongperTheme
+import com.example.songper.viewModel.SpotifyViewModel
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: MainViewModel by viewModels()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel.setContext(this)
+
+        // Request permissions once at startup
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.SET_WALLPAPER,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ),
+                123
+            )
+        } else {
+            requestPermissions(
+                arrayOf(Manifest.permission.SET_WALLPAPER),
+                123
+            )
+        }
 
         setContent {
-            SongperTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    AppNavigation(viewModel)
-                }
+            MaterialTheme {
+                App(SpotifyViewModel() )
             }
         }
     }

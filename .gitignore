@@ -29,3 +29,5 @@ config.properties
 # Ignore anything user-specific or environment-specific
 *.log
 *.tmp
+BuildConfig.java
+

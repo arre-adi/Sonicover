@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
@@ -34,10 +35,10 @@ fun LoginScreen(viewModel: SpotifyViewModel) {
         }
     }
 
-    Column(
+    Row(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceAround
     ) {
         Button(
             onClick = {
@@ -56,7 +57,51 @@ fun LoginScreen(viewModel: SpotifyViewModel) {
                 launcher.launch(intent)
             }
         ) {
-            Text("Login with Spotify")
+            Text("Spotify")
+        }
+        Button(
+            onClick = {
+                val builder = AuthorizationRequest.Builder(
+                    CLIENT_ID,
+                    AuthorizationResponse.Type.TOKEN,
+                    REDIRECT_URI
+                )
+                builder.setScopes(arrayOf("user-read-currently-playing", "user-read-private"))
+                val request = builder.build()
+
+                val intent = AuthorizationClient.createLoginActivityIntent(
+                    context as Activity,
+                    request
+                )
+                launcher.launch(intent)
+            }
+        ) {
+            Text("JioSavn")
+        }
+        Button(
+            onClick = {
+                val builder = AuthorizationRequest.Builder(
+                    CLIENT_ID,
+                    AuthorizationResponse.Type.TOKEN,
+                    REDIRECT_URI
+                )
+                builder.setScopes(arrayOf("user-read-currently-playing", "user-read-private"))
+                val request = builder.build()
+
+                val intent = AuthorizationClient.createLoginActivityIntent(
+                    context as Activity,
+                    request
+                )
+                launcher.launch(intent)
+            }
+        ) {
+            Text("YTmusic")
         }
     }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun PreviewLoginScreen() {
+    LoginScreen(viewModel = SpotifyViewModel())
 }

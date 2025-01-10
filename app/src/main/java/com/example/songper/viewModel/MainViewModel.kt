@@ -27,68 +27,164 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.converter.gson.GsonConverterFactory
-import java.io.File
-import java.io.FileOutputStream
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
 import java.net.URL
 
-object PermissionUtil {
-    val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        arrayOf(
-            Manifest.permission.SET_WALLPAPER,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-    } else {
-        arrayOf(
-            Manifest.permission.SET_WALLPAPER,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-    }
-
-    fun hasPermissions(context: Context): Boolean {
-        return requiredPermissions.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    fun shouldShowRationale(activity: Activity): Boolean {
-        return requiredPermissions.any {
-            ActivityCompat.shouldShowRequestPermissionRationale(activity, it)
-        }
-    }
-}
 
 object WallpaperUtil {
-    suspend fun setWallpaperFromUrl(context: Context, imageUrl: String): Result<Unit> {
+
+        fun getDominantColor(bitmap: Bitmap): Int {
+            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
+            val width = resizedBitmap.width
+            val height = resizedBitmap.height
+
+            var redBucket = 0
+            var greenBucket = 0
+            var blueBucket = 0
+            var pixelCount = 0
+
+            for (y in 0 until height) {
+                for (x in 0 until width) {
+                    val color = resizedBitmap.getPixel(x, y)
+                    redBucket += Color.red(color)
+                    greenBucket += Color.green(color)
+                    blueBucket += Color.blue(color)
+                    pixelCount++
+                }
+            }
+
+            resizedBitmap.recycle()
+
+            // Calculate average color
+            return Color.rgb(
+                redBucket / pixelCount,
+                greenBucket / pixelCount,
+                blueBucket / pixelCount
+            )
+        }
+
+    private fun createCustomWallpaperBitmap(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Bitmap {
+        // Create a bitmap matching screen dimensions
+        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(wallpaperBitmap)
+
+        // Get and set dominant color as background
+        val backgroundColor = getDominantColor(albumArt)
+        canvas.drawColor(backgroundColor)
+
+        // Calculate dimensions for centered square album art
+        val artSize = minOf(screenWidth, screenHeight) / 2 // Make art take up half the smaller screen dimension
+        val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
+
+        // Calculate positioning to center the album art
+        val left = (screenWidth - artSize) / 2f
+        val top = (screenHeight - artSize) / 2f
+
+        // Draw the album art
+        canvas.drawBitmap(scaledAlbumArt, left, top, null)
+
+        // Calculate if we need light or dark text based on background color
+        val shouldUseLightText = isDarkColor(backgroundColor)
+        val textColor = if (shouldUseLightText) Color.WHITE else Color.BLACK
+
+        // Set up text paint for artist name
+        val textPaint = Paint().apply {
+            color = textColor
+            textSize = 60f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+
+
+        return wallpaperBitmap
+    }
+
+    // Helper function to determine if we should use light text
+    private fun isDarkColor(color: Int): Boolean {
+        val darkness = 1 - (0.299 * Color.red(color) +
+                0.587 * Color.green(color) +
+                0.114 * Color.blue(color)) / 255
+        return darkness >= 0.5
+    }
+
+    suspend fun setCustomWallpaperFromUrl(
+        context: Context,
+        imageUrl: String,
+        artistName: String
+    ): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
                 val wallpaperManager = WallpaperManager.getInstance(context)
 
-                // Create a temporary file in the cache directory
-                val cacheFile = File(context.cacheDir, "temp_wallpaper.jpg")
+                // Get screen dimensions
+                val displayMetrics = context.resources.displayMetrics
+                val screenWidth = displayMetrics.widthPixels
+                val screenHeight = displayMetrics.heightPixels
 
-                // Download and save the image
-                val response = URL(imageUrl).openStream()
-                response.use { input ->
-                    FileOutputStream(cacheFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
+                // Download the album art
+                val albumArtBitmap = BitmapFactory.decodeStream(URL(imageUrl).openStream())
+
+                // Create custom wallpaper bitmap
+                val wallpaperBitmap = createCustomWallpaperBitmap(
+                    context,
+                    albumArtBitmap,
+                    screenWidth,
+                    screenHeight
+                )
 
                 // Set the wallpaper
-                cacheFile.inputStream().use { stream ->
-                    val bitmap = BitmapFactory.decodeStream(stream)
-                    wallpaperManager.setBitmap(bitmap)
-                }
+                wallpaperManager.setBitmap(wallpaperBitmap)
 
-                // Clean up the temporary file
-                cacheFile.delete()
+                // Clean up
+                albumArtBitmap.recycle()
+                wallpaperBitmap.recycle()
 
                 Result.success(Unit)
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
+    }
+}
+
+object ColorAnalysis {
+    fun getDominantColor(bitmap: Bitmap): Int {
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
+        val width = resizedBitmap.width
+        val height = resizedBitmap.height
+
+        var redBucket = 0
+        var greenBucket = 0
+        var blueBucket = 0
+        var pixelCount = 0
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val color = resizedBitmap.getPixel(x, y)
+                redBucket += Color.red(color)
+                greenBucket += Color.green(color)
+                blueBucket += Color.blue(color)
+                pixelCount++
+            }
+        }
+
+        resizedBitmap.recycle()
+
+        // Calculate average color
+        return Color.rgb(
+            redBucket / pixelCount,
+            greenBucket / pixelCount,
+            blueBucket / pixelCount
+        )
     }
 }
 
@@ -206,9 +302,12 @@ class SpotifyViewModel : ViewModel() {
     private suspend fun updateWallpaper(context: Context, imageUrl: String) {
         isSettingWallpaper = true
         try {
-            WallpaperUtil.setWallpaperFromUrl(context, imageUrl)
+            // Extract artist name from currently playing
+            val artistName = currentlyPlaying?.split(" by ")?.lastOrNull() ?: "Unknown Artist"
+
+            WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl, artistName)
                 .onSuccess {
-                    errorMessage = null // Clear any previous error messages
+                    errorMessage = null
                 }
                 .onFailure {
                     errorMessage = "Failed to set wallpaper: ${it.message}"

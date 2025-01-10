@@ -21,3 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Songper"
 include(":app")
+include(":app", ":spotify-app-remote")
+

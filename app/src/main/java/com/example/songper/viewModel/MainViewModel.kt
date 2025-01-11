@@ -24,13 +24,10 @@ import retrofit2.converter.gson.GsonConverterFactory
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Typeface
 import java.net.URL
 
 
 object WallpaperUtil {
-
     private fun getDominantColor(bitmap: Bitmap): Int {
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true) // Downscale for efficiency
         val colorMap = HashMap<Int, Int>() // Map to store color frequencies
@@ -66,12 +63,16 @@ object WallpaperUtil {
         val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(wallpaperBitmap)
 
-        // Get and set dominant color as background
+        // Get and set the dominant color as background
         val backgroundColor = getDominantColor(albumArt)
         canvas.drawColor(backgroundColor)
 
+        // Calculate complementary color
+        val complementaryColor = getComplementaryColor(backgroundColor)
+
+
         // Calculate dimensions for centered square album art
-        val artSize = minOf(screenWidth, screenHeight) / 2 // Make art take up half the smaller screen dimension
+        val artSize = minOf(screenWidth, screenHeight) / 2 // Album art takes up half the smaller screen dimension
         val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
 
         // Calculate positioning to center the album art
@@ -81,21 +82,20 @@ object WallpaperUtil {
         // Draw the album art
         canvas.drawBitmap(scaledAlbumArt, left, top, null)
 
-        // Calculate if we need light or dark text based on background color
-        val shouldUseLightText = isDarkColor(backgroundColor)
-        val textColor = if (shouldUseLightText) Color.WHITE else Color.BLACK
-
-        // Set up text paint for artist name
-        val textPaint = Paint().apply {
-            color = textColor
-            textSize = 60f
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }
-
+        // Clean up
+        scaledAlbumArt.recycle()
 
         return wallpaperBitmap
     }
+
+    // Function to get the complementary color
+    private fun getComplementaryColor(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[0] = (hsv[0] + 180) % 360 // Shift the hue by 180 degrees
+        return Color.HSVToColor(hsv)
+    }
+
 
     // Helper function to determine if we should use light text
     private fun isDarkColor(color: Int): Boolean {
@@ -129,8 +129,8 @@ object WallpaperUtil {
                     screenHeight
                 )
 
-                // Set the wallpaper
-                wallpaperManager.setBitmap(wallpaperBitmap)
+                // Set the wallpaper for lock screen only using FLAG_LOCK
+                wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
 
                 // Clean up
                 albumArtBitmap.recycle()
@@ -193,7 +193,7 @@ class SpotifyViewModel : ViewModel() {
         context = appContext.applicationContext
     }
 
-    fun handleLoginResult(response: AuthorizationResponse) {
+    fun handleLoginResult(context: Context, response: AuthorizationResponse) {
         when (response.type) {
             AuthorizationResponse.Type.TOKEN -> {
                 viewModelScope.launch {

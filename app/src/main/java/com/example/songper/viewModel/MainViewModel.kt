@@ -2,18 +2,12 @@ package com.example.songper.viewModel
 
 import CurrentlyPlaying
 import UserProfile
-import android.Manifest
-import android.app.Activity
 import android.app.WallpaperManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
-import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -37,35 +31,30 @@ import java.net.URL
 
 object WallpaperUtil {
 
-        fun getDominantColor(bitmap: Bitmap): Int {
-            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
-            val width = resizedBitmap.width
-            val height = resizedBitmap.height
+    private fun getDominantColor(bitmap: Bitmap): Int {
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true) // Downscale for efficiency
+        val colorMap = HashMap<Int, Int>() // Map to store color frequencies
+        val width = resizedBitmap.width
+        val height = resizedBitmap.height
 
-            var redBucket = 0
-            var greenBucket = 0
-            var blueBucket = 0
-            var pixelCount = 0
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val color = resizedBitmap.getPixel(x, y)
+                if (Color.alpha(color) < 128) continue // Ignore transparent pixels
 
-            for (y in 0 until height) {
-                for (x in 0 until width) {
-                    val color = resizedBitmap.getPixel(x, y)
-                    redBucket += Color.red(color)
-                    greenBucket += Color.green(color)
-                    blueBucket += Color.blue(color)
-                    pixelCount++
-                }
+                // Count the color occurrences
+                colorMap[color] = colorMap.getOrDefault(color, 0) + 1
             }
-
-            resizedBitmap.recycle()
-
-            // Calculate average color
-            return Color.rgb(
-                redBucket / pixelCount,
-                greenBucket / pixelCount,
-                blueBucket / pixelCount
-            )
         }
+
+        resizedBitmap.recycle()
+
+        // Find the most frequent color
+        return colorMap.maxByOrNull { it.value }?.key ?: Color.BLACK // Default to black if no color found
+    }
+
+
+
 
     private fun createCustomWallpaperBitmap(
         context: Context,
@@ -119,7 +108,6 @@ object WallpaperUtil {
     suspend fun setCustomWallpaperFromUrl(
         context: Context,
         imageUrl: String,
-        artistName: String
     ): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
@@ -156,37 +144,6 @@ object WallpaperUtil {
     }
 }
 
-object ColorAnalysis {
-    fun getDominantColor(bitmap: Bitmap): Int {
-        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
-        val width = resizedBitmap.width
-        val height = resizedBitmap.height
-
-        var redBucket = 0
-        var greenBucket = 0
-        var blueBucket = 0
-        var pixelCount = 0
-
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val color = resizedBitmap.getPixel(x, y)
-                redBucket += Color.red(color)
-                greenBucket += Color.green(color)
-                blueBucket += Color.blue(color)
-                pixelCount++
-            }
-        }
-
-        resizedBitmap.recycle()
-
-        // Calculate average color
-        return Color.rgb(
-            redBucket / pixelCount,
-            greenBucket / pixelCount,
-            blueBucket / pixelCount
-        )
-    }
-}
 
 // API Client
 object SpotifyApiClient {
@@ -223,8 +180,8 @@ class SpotifyViewModel : ViewModel() {
         private set
     var albumArtUrl by mutableStateOf<String?>(null)
         private set
-    var errorMessage by mutableStateOf<String?>(null)
-    var isSettingWallpaper by mutableStateOf(false)
+    private var errorMessage by mutableStateOf<String?>(null)
+    private var isSettingWallpaper by mutableStateOf(false)
         private set
 
     private var accessToken: String? = null
@@ -305,7 +262,7 @@ class SpotifyViewModel : ViewModel() {
             // Extract artist name from currently playing
             val artistName = currentlyPlaying?.split(" by ")?.lastOrNull() ?: "Unknown Artist"
 
-            WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl, artistName)
+            WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl)
                 .onSuccess {
                     errorMessage = null
                 }

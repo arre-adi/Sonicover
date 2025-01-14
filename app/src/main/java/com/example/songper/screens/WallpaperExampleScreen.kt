@@ -42,6 +42,7 @@ fun LandingPage(viewModel: SpotifyViewModel) {
         )
 
         // Currently Playing Card
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -50,7 +51,6 @@ fun LandingPage(viewModel: SpotifyViewModel) {
             Row(
                 modifier = Modifier.padding(16.dp)
             ) {
-                // Album Art Placeholder
                 Box(
                     modifier = Modifier
                         .size(100.dp)

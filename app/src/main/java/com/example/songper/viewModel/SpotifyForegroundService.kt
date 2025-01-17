@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.IBinder
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import com.example.songper.Model.WallpaperUtil
 import kotlinx.coroutines.*
 
 class SpotifyForegroundService : Service() {

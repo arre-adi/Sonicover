@@ -13,9 +13,11 @@ composeBom = "2024.12.01"
 navigationCompose = "2.8.5"
 paletteKtx = "1.0.0"
 filamentAndroid = "1.17.1"
+renderscriptIntrinsicsReplacementToolkit = "1.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-renderscript-intrinsics-replacement-toolkit = { module = "androidx.renderscript:renderscript-intrinsics-replacement-toolkit", version.ref = "renderscriptIntrinsicsReplacementToolkit" }
 auth0 = { module = "com.auth0.android:auth0", version.ref = "auth0" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

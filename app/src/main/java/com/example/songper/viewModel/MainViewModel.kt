@@ -23,8 +23,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.converter.gson.GsonConverterFactory
 import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.RectF
+import android.graphics.Shader
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.work.Constraints
@@ -40,121 +45,147 @@ import java.util.concurrent.TimeUnit
 
 
 object WallpaperUtil {
-        private fun getDominantColor(bitmap: Bitmap): Int {
-            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true) // Downscale for efficiency
-            val colorMap = HashMap<Int, Int>() // Map to store color frequencies
-            val width = resizedBitmap.width
-            val height = resizedBitmap.height
+    private fun getDominantColor(bitmap: Bitmap): Int {
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
+        val colorMap = HashMap<Int, Int>()
+        val width = resizedBitmap.width
+        val height = resizedBitmap.height
 
-            for (y in 0 until height) {
-                for (x in 0 until width) {
-                    val color = resizedBitmap.getPixel(x, y)
-                    if (Color.alpha(color) < 128) continue // Ignore transparent pixels
-
-                    // Count the color occurrences
-                    colorMap[color] = colorMap.getOrDefault(color, 0) + 1
-                }
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val color = resizedBitmap.getPixel(x, y)
+                if (Color.alpha(color) < 128) continue
+                colorMap[color] = colorMap.getOrDefault(color, 0) + 1
             }
-
-            resizedBitmap.recycle()
-
-            // Find the most frequent color
-            return colorMap.maxByOrNull { it.value }?.key ?: Color.BLACK // Default to black if no color found
         }
 
+        resizedBitmap.recycle()
+        return colorMap.maxByOrNull { it.value }?.key ?: Color.BLACK
+    }
 
+    private fun createCustomWallpaperBitmap(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Bitmap {
+        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(wallpaperBitmap)
 
+        // Draw background with dominant color
+        val backgroundColor = getDominantColor(albumArt)
+        canvas.drawColor(backgroundColor)
 
-        private fun createCustomWallpaperBitmap(
-            context: Context,
-            albumArt: Bitmap,
-            screenWidth: Int,
-            screenHeight: Int
-        ): Bitmap {
-            // Create a bitmap matching screen dimensions
-            val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(wallpaperBitmap)
+        // Calculate sizes
+        val glassRectHeight = (screenHeight * 0.66).toInt()
+        val glassRectWidth = (screenWidth * 0.5).toInt()
+        val artSize = (glassRectWidth * 0.8).toInt()
 
-            // Get and set the dominant color as background
-            val backgroundColor = getDominantColor(albumArt)
-            canvas.drawColor(backgroundColor)
+        // Calculate positions
+        val glassRectLeft = (screenWidth - glassRectWidth) / 2f
+        val glassRectTop = (screenHeight - glassRectHeight) / 2f
+        val albumLeft = (screenWidth - artSize) / 2f
+        val albumTop = (screenHeight - artSize) / 2f
 
-            // Calculate complementary color
-            val complementaryColor = getComplementaryColor(backgroundColor)
+        // Create glassmorphism effect - Fullscreen
+        val glassRect = RectF(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat())
 
+// 1. Draw blur layer
+        val blurPaint = Paint().apply {
+            isAntiAlias = true
+            maskFilter = BlurMaskFilter(35f, BlurMaskFilter.Blur.NORMAL)
+            color = Color.WHITE
+            alpha = 77 // 30% opacity
+        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, blurPaint)
 
-            // Calculate dimensions for centered square album art
-            val artSize = minOf(screenWidth, screenHeight) / 2 // Album art takes up half the smaller screen dimension
-            val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
+// 2. Draw glass gradient
+        val gradientPaint = Paint().apply {
+            isAntiAlias = true
+            shader = RadialGradient(
+                glassRect.centerX(),
+                glassRect.centerY(),
+                glassRect.width().coerceAtLeast(glassRect.height()) * 0.96f,
+                intArrayOf(
+                    Color.argb(120, 255, 255, 255), // 50% white
+                    Color.argb(85, 255, 255, 255),  // 30% white
+                    Color.argb(40, 255, 255, 255)   // 10% white
+                ),
+                floatArrayOf(0f, 0.5f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, gradientPaint)
 
-            // Calculate positioning to center the album art
-            val left = (screenWidth - artSize) / 2f
-            val top = (screenHeight - artSize) / 2f
+// 3. Draw subtle border
+        val borderPaint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+            color = Color.WHITE
+            alpha = 51 // 20% opacity
+        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, borderPaint)
 
-            // Draw the album art
-            canvas.drawBitmap(scaledAlbumArt, left, top, null)
-
-            // Clean up
-            scaledAlbumArt.recycle()
-
-            return wallpaperBitmap
+// 4. Draw shadow
+        // 4. Optional: Remove or modify shadow if it's causing unwanted effects
+        val shadowPaint = Paint().apply {
+            isAntiAlias = true
+            maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.OUTER)
+            color = Color.TRANSPARENT // Set shadow to transparent if you don't want any tint
         }
 
-        // Function to get the complementary color
-        private fun getComplementaryColor(color: Int): Int {
-            val hsv = FloatArray(3)
-            Color.colorToHSV(color, hsv)
-            hsv[0] = (hsv[0] + 180) % 360 // Shift the hue by 180 degrees
-            return Color.HSVToColor(hsv)
-        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, shadowPaint)
 
 
-        // Helper function to determine if we should use light text
-        private fun isDarkColor(color: Int): Boolean {
-            val darkness = 1 - (0.299 * Color.red(color) +
-                    0.587 * Color.green(color) +
-                    0.114 * Color.blue(color)) / 255
-            return darkness >= 0.5
-        }
+        // Draw the album art
+        val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
+        canvas.drawBitmap(scaledAlbumArt, albumLeft, albumTop, null)
 
-        suspend fun setCustomWallpaperFromUrl(
-            context: Context,
-            imageUrl: String,
-        ): Result<Unit> {
-            return withContext(Dispatchers.IO) {
-                try {
-                    val wallpaperManager = WallpaperManager.getInstance(context)
+        scaledAlbumArt.recycle()
+        return wallpaperBitmap
+    }
 
-                    // Get screen dimensions
-                    val displayMetrics = context.resources.displayMetrics
-                    val screenWidth = displayMetrics.widthPixels
-                    val screenHeight = displayMetrics.heightPixels
+    // Rest of the utility functions remain the same
+    private fun getComplementaryColor(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[0] = (hsv[0] + 180) % 360
+        return Color.HSVToColor(hsv)
+    }
 
-                    // Download the album art
-                    val albumArtBitmap = BitmapFactory.decodeStream(URL(imageUrl).openStream())
+    private fun isDarkColor(color: Int): Boolean {
+        val darkness = 1 - (0.299 * Color.red(color) +
+                0.587 * Color.green(color) +
+                0.114 * Color.blue(color)) / 255
+        return darkness >= 0.5
+    }
 
-                    // Create custom wallpaper bitmap
-                    val wallpaperBitmap = createCustomWallpaperBitmap(
-                        context,
-                        albumArtBitmap,
-                        screenWidth,
-                        screenHeight
-                    )
-
-                    // Set the wallpaper for lock screen only using FLAG_LOCK
-                    wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
-
-                    // Clean up
-                    albumArtBitmap.recycle()
-                    wallpaperBitmap.recycle()
-
-                    Result.success(Unit)
-                } catch (e: Exception) {
-                    Result.failure(e)
-                }
-            }
+    suspend fun setCustomWallpaperFromUrl(
+        context: Context,
+        imageUrl: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val wallpaperManager = WallpaperManager.getInstance(context)
+            val displayMetrics = context.resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
+            val albumArtBitmap = BitmapFactory.decodeStream(URL(imageUrl).openStream())
+            val wallpaperBitmap = createCustomWallpaperBitmap(
+                context,
+                albumArtBitmap,
+                screenWidth,
+                screenHeight
+            )
+            wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
+            albumArtBitmap.recycle()
+            wallpaperBitmap.recycle()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
+}
 
 
     // API Client

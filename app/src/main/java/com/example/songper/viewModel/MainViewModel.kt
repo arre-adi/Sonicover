@@ -26,12 +26,16 @@ import android.graphics.Bitmap
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.graphics.Path
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -40,12 +44,56 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.example.songper.viewModel.WallpaperUtil.getComplementaryColor
+import com.example.songper.viewModel.WallpaperUtil.getDominantColor
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
 
-object WallpaperUtil {
-    private fun getDominantColor(bitmap: Bitmap): Int {
+    object WallpaperUtil {
+    private fun drawShapes(canvas: Canvas, albumLeft: Float, albumTop: Float, artSize: Int, shapeType: String) {
+        val paint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.FILL
+        }
+
+        when (shapeType) {
+            "A" -> {
+                paint.color = Color.RED
+                val path = android.graphics.Path().apply {
+                    moveTo(albumLeft + artSize/2, albumTop - 40f)
+                    lineTo(albumLeft + artSize/2 - 30f, albumTop)
+                    lineTo(albumLeft + artSize/2 + 30f, albumTop)
+                    close()
+                }
+                canvas.drawPath(path, paint)
+            }
+            "B" -> {
+                paint.color = Color.BLACK
+                canvas.drawCircle(
+                    albumLeft + artSize/2,
+                    albumTop - 30f,
+                    30f,
+                    paint
+                )
+            }
+            "C" -> {
+                paint.color = Color.RED
+                // Draw 3 triangles
+                for (i in -1..1) {
+                    val path = android.graphics.Path().apply {
+                        val xOffset = i * 70f
+                        moveTo(albumLeft + artSize/2 + xOffset, albumTop - 40f)
+                        lineTo(albumLeft + artSize/2 - 20f + xOffset, albumTop)
+                        lineTo(albumLeft + artSize/2 + 20f + xOffset, albumTop)
+                        close()
+                    }
+                    canvas.drawPath(path, paint)
+                }
+            }
+        }
+    }
+    fun getDominantColor(bitmap: Bitmap): Int {
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
         val colorMap = HashMap<Int, Int>()
         val width = resizedBitmap.width
@@ -67,7 +115,8 @@ object WallpaperUtil {
         context: Context,
         albumArt: Bitmap,
         screenWidth: Int,
-        screenHeight: Int
+        screenHeight: Int,
+        shapeType: String? = null
     ): Bitmap {
         val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(wallpaperBitmap)
@@ -79,7 +128,8 @@ object WallpaperUtil {
         // Calculate sizes
         val glassRectHeight = (screenHeight * 0.66).toInt()
         val glassRectWidth = (screenWidth * 0.5).toInt()
-        val artSize = (glassRectWidth * 0.8).toInt()
+
+        val artSize = (screenWidth * 0.4).toInt()
 
         // Calculate positions
         val glassRectLeft = (screenWidth - glassRectWidth) / 2f
@@ -141,13 +191,16 @@ object WallpaperUtil {
         // Draw the album art
         val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
         canvas.drawBitmap(scaledAlbumArt, albumLeft, albumTop, null)
+        shapeType?.let {
+            drawShapes(canvas, albumLeft, albumTop, artSize, it)
+        }
 
         scaledAlbumArt.recycle()
         return wallpaperBitmap
     }
 
     // Rest of the utility functions remain the same
-    private fun getComplementaryColor(color: Int): Int {
+    fun getComplementaryColor(color: Int): Int {
         val hsv = FloatArray(3)
         Color.colorToHSV(color, hsv)
         hsv[0] = (hsv[0] + 180) % 360
@@ -161,21 +214,22 @@ object WallpaperUtil {
         return darkness >= 0.5
     }
 
+
     suspend fun setCustomWallpaperFromUrl(
         context: Context,
         imageUrl: String,
+        shapeType: String? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val wallpaperManager = WallpaperManager.getInstance(context)
             val displayMetrics = context.resources.displayMetrics
-            val screenWidth = displayMetrics.widthPixels
-            val screenHeight = displayMetrics.heightPixels
             val albumArtBitmap = BitmapFactory.decodeStream(URL(imageUrl).openStream())
             val wallpaperBitmap = createCustomWallpaperBitmap(
                 context,
                 albumArtBitmap,
-                screenWidth,
-                screenHeight
+                displayMetrics.widthPixels,
+                displayMetrics.heightPixels,
+                shapeType
             )
             wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
             albumArtBitmap.recycle()
@@ -187,6 +241,227 @@ object WallpaperUtil {
     }
 }
 
+    object WallpaperDesigns {
+    private fun getDominantColor(bitmap: Bitmap): Int {
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
+        val colorMap = HashMap<Int, Int>()
+
+        for (y in 0 until resizedBitmap.height) {
+            for (x in 0 until resizedBitmap.width) {
+                val color = resizedBitmap.getPixel(x, y)
+                if (Color.alpha(color) < 128) continue
+                colorMap[color] = colorMap.getOrDefault(color, 0) + 1
+            }
+        }
+
+        resizedBitmap.recycle()
+        return colorMap.maxByOrNull { it.value }?.key ?: Color.BLACK
+    }
+
+    private fun getComplementaryColor(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[0] = (hsv[0] + 180) % 360
+        return Color.HSVToColor(hsv)
+    }
+
+    fun createDesignA(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Bitmap {
+        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(wallpaperBitmap)
+
+        // Design A: Minimalist with red accent
+        val backgroundColor = getDominantColor(albumArt)
+        canvas.drawColor(backgroundColor)
+
+        val artSize = (screenWidth * 0.4).toInt()
+        val albumLeft = (screenWidth - artSize) / 2f
+        val albumTop = (screenHeight - artSize) / 2f
+
+        applyGlassmorphism(canvas, screenWidth, screenHeight)
+
+        val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
+        canvas.drawBitmap(scaledAlbumArt, albumLeft, albumTop, null)
+
+        val paint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.FILL
+            color = Color.RED
+        }
+
+        val path = android.graphics.Path().apply {
+            moveTo(albumLeft + artSize/2, albumTop - 40f)
+            lineTo(albumLeft + artSize/2 - 30f, albumTop)
+            lineTo(albumLeft + artSize/2 + 30f, albumTop)
+            close()
+        }
+        canvas.drawPath(path, paint)
+
+        scaledAlbumArt.recycle()
+        return wallpaperBitmap
+    }
+
+    fun createDesignB(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Bitmap {
+        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(wallpaperBitmap)
+
+        canvas.drawColor(Color.BLACK)
+
+        val artSize = (screenWidth * 0.4).toInt()
+        val albumLeft = (screenWidth - artSize) / 2f
+        val albumTop = (screenHeight - artSize) / 2f
+
+        applyDarkGlassmorphism(canvas, screenWidth, screenHeight)
+
+        val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
+        val circularAlbumArt = createCircularBitmap(scaledAlbumArt)
+        canvas.drawBitmap(circularAlbumArt, albumLeft, albumTop, null)
+
+        scaledAlbumArt.recycle()
+        circularAlbumArt.recycle()
+        return wallpaperBitmap
+    }
+
+    fun createDesignC(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Bitmap {
+        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(wallpaperBitmap)
+
+        val dominantColor = getDominantColor(albumArt)
+        val complementaryColor = getComplementaryColor(dominantColor)
+
+        val gradient = LinearGradient(
+            0f, 0f, screenWidth.toFloat(), screenHeight.toFloat(),
+            dominantColor, complementaryColor,
+            Shader.TileMode.CLAMP
+        )
+        val paint = Paint().apply {
+            shader = gradient
+        }
+        canvas.drawPaint(paint)
+
+        val artSize = (screenWidth * 0.4).toInt()
+        val albumLeft = (screenWidth - artSize) / 2f
+        val albumTop = (screenHeight - artSize) / 2f
+
+        applyFloatingEffect(canvas, screenWidth, screenHeight)
+
+        val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
+        drawBitmapWithShadow(canvas, scaledAlbumArt, albumLeft, albumTop)
+
+        scaledAlbumArt.recycle()
+        return wallpaperBitmap
+    }
+
+    private fun applyGlassmorphism(canvas: Canvas, width: Int, height: Int) {
+        val glassRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+
+        // Blur layer
+        val blurPaint = Paint().apply {
+            isAntiAlias = true
+            maskFilter = BlurMaskFilter(35f, BlurMaskFilter.Blur.NORMAL)
+            color = Color.WHITE
+            alpha = 77
+        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, blurPaint)
+
+        // Glass gradient
+        val gradientPaint = Paint().apply {
+            isAntiAlias = true
+            shader = RadialGradient(
+                glassRect.centerX(),
+                glassRect.centerY(),
+                glassRect.width().coerceAtLeast(glassRect.height()) * 0.96f,
+                intArrayOf(
+                    Color.argb(120, 255, 255, 255),
+                    Color.argb(85, 255, 255, 255),
+                    Color.argb(40, 255, 255, 255)
+                ),
+                floatArrayOf(0f, 0.5f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, gradientPaint)
+    }
+
+    private fun applyDarkGlassmorphism(canvas: Canvas, width: Int, height: Int) {
+        val glassRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+
+        val darkBlurPaint = Paint().apply {
+            isAntiAlias = true
+            maskFilter = BlurMaskFilter(35f, BlurMaskFilter.Blur.NORMAL)
+            color = Color.BLACK
+            alpha = 77
+        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, darkBlurPaint)
+    }
+
+    private fun applyFloatingEffect(canvas: Canvas, width: Int, height: Int) {
+        val glassRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+
+        val shadowPaint = Paint().apply {
+            isAntiAlias = true
+            maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.OUTER)
+            color = Color.BLACK
+            alpha = 40
+        }
+        canvas.drawRoundRect(glassRect, 40f, 40f, shadowPaint)
+    }
+
+    private fun createCircularBitmap(source: Bitmap): Bitmap {
+        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+
+        val paint = Paint().apply {
+            isAntiAlias = true
+            color = Color.BLACK
+        }
+
+        canvas.drawCircle(
+            source.width / 2f,
+            source.height / 2f,
+            source.width.coerceAtMost(source.height) / 2f,
+            paint
+        )
+
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+        canvas.drawBitmap(source, 0f, 0f, paint)
+
+        return output
+    }
+
+    private fun drawBitmapWithShadow(canvas: Canvas, bitmap: Bitmap, left: Float, top: Float) {
+        val shadowPaint = Paint().apply {
+            isAntiAlias = true
+            maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.NORMAL)
+            color = Color.BLACK
+            alpha = 50
+        }
+
+        canvas.drawRect(
+            left - 10f,
+            top - 10f,
+            left + bitmap.width + 10f,
+            top + bitmap.height + 10f,
+            shadowPaint
+        )
+
+        canvas.drawBitmap(bitmap, left, top, null)
+    }
+}
 
     // API Client
     object SpotifyApiClient {
@@ -223,9 +498,12 @@ object WallpaperUtil {
             private set
         var albumArtUrl by mutableStateOf<String?>(null)
             private set
+        var selectedDesign by mutableStateOf<String?>(null)
+            private set
         private var errorMessage by mutableStateOf<String?>(null)
         private var isSettingWallpaper by mutableStateOf(false)
             private set
+
 
         private var accessToken: String? = null
         private var pollingJob: Job? = null
@@ -237,6 +515,18 @@ object WallpaperUtil {
         }
 
         private var pollingInterval = DEFAULT_POLLING_INTERVAL
+
+
+        fun updateWallpaper(designType: String) {
+            selectedDesign = designType
+            viewModelScope.launch {
+                albumArtUrl?.let { url ->
+                    context?.let { ctx ->
+                        WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, designType)
+                    }
+                }
+            }
+        }
 
         fun initialize(appContext: Context) {
             context = appContext.applicationContext
@@ -339,17 +629,12 @@ object WallpaperUtil {
                                 currentlyPlaying = "${track.name} by ${track.artists.joinToString { it.name }}"
                                 albumArtUrl = track.album.images.firstOrNull()?.url
 
-                                // Update preferences with current album art URL
                                 context?.let { ctx ->
                                     albumArtUrl?.let { url ->
-                                        ctx.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
-                                            .edit()
-                                            .putString("last_album_art_url", url)
-                                            .apply()
-
-                                        // Update wallpaper when art changes
                                         if (url != lastAlbumArtUrl) {
-                                            updateWallpaper(ctx, url)
+                                            selectedDesign?.let { design ->
+                                                WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, design)
+                                            }
                                             lastAlbumArtUrl = url
                                         }
                                     }
@@ -364,7 +649,8 @@ object WallpaperUtil {
             }
         }
 
-        private suspend fun updateWallpaper(context: Context, imageUrl: String) {
+
+        suspend fun updateWallpaper(context: Context, imageUrl: String) {
             isSettingWallpaper = true
             try {
                 WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl)

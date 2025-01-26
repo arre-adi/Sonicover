@@ -33,9 +33,9 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.ui.graphics.Path
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -44,56 +44,72 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.example.songper.viewModel.WallpaperUtil.getComplementaryColor
-import com.example.songper.viewModel.WallpaperUtil.getDominantColor
+import com.example.songper.viewModel.WallpaperDesigns.createDesignA
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
 
     object WallpaperUtil {
-    private fun drawShapes(canvas: Canvas, albumLeft: Float, albumTop: Float, artSize: Int, shapeType: String) {
-        val paint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.FILL
+        val currentSongName = SpotifyViewModel.currentlyPlaying ?: "Unknown Song"
+
+        fun drawShapes(
+            canvas: Canvas,
+            albumLeft: Float,
+            albumTop: Float,
+            artSize: Int,
+            shapeType: String,
+            context: Context,
+            albumArt: Bitmap,
+            screenWidth: Int,
+            screenHeight: Int,
+            currentSongName: String
+        ) {
+            // Center of the song cover
+            val centerX = screenWidth / 2f
+            val centerY = screenHeight / 2f
+
+            // Paint for text
+            val paint = Paint().apply {
+                color = Color.BLACK
+                textSize = 24f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
+
+            // Draw concentric text
+            val radiusIncrement = 60
+            var radius = artSize / 2 + radiusIncrement
+
+            repeat(8 ) { circleIndex ->
+                val text = currentSongName
+                val charArray = text.toCharArray()
+                val angleIncrement = 360f / charArray.size
+
+                for (i in charArray.indices) {
+                    val angle = Math.toRadians(i * angleIncrement.toDouble())
+                    val x = centerX + radius * Math.cos(angle).toFloat()
+                    val y = centerY + radius * Math.sin(angle).toFloat()
+
+                    // Draw text vertically
+                    canvas.drawText(charArray[i].toString(), x, y, paint)
+                }
+
+                radius += radiusIncrement
+            }
+
+            // Draw song cover (centered)
+            canvas.drawBitmap(
+                albumArt,
+                centerX - albumArt.width / 2f,
+                centerY - albumArt.height / 2f,
+                null
+            )
         }
 
-        when (shapeType) {
-            "A" -> {
-                paint.color = Color.RED
-                val path = android.graphics.Path().apply {
-                    moveTo(albumLeft + artSize/2, albumTop - 40f)
-                    lineTo(albumLeft + artSize/2 - 30f, albumTop)
-                    lineTo(albumLeft + artSize/2 + 30f, albumTop)
-                    close()
-                }
-                canvas.drawPath(path, paint)
-            }
-            "B" -> {
-                paint.color = Color.BLACK
-                canvas.drawCircle(
-                    albumLeft + artSize/2,
-                    albumTop - 30f,
-                    30f,
-                    paint
-                )
-            }
-            "C" -> {
-                paint.color = Color.RED
-                // Draw 3 triangles
-                for (i in -1..1) {
-                    val path = android.graphics.Path().apply {
-                        val xOffset = i * 70f
-                        moveTo(albumLeft + artSize/2 + xOffset, albumTop - 40f)
-                        lineTo(albumLeft + artSize/2 - 20f + xOffset, albumTop)
-                        lineTo(albumLeft + artSize/2 + 20f + xOffset, albumTop)
-                        close()
-                    }
-                    canvas.drawPath(path, paint)
-                }
-            }
-        }
-    }
-    fun getDominantColor(bitmap: Bitmap): Int {
+
+
+
+        fun getDominantColor(bitmap: Bitmap): Int {
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
         val colorMap = HashMap<Int, Int>()
         val width = resizedBitmap.width
@@ -111,101 +127,93 @@ import java.util.concurrent.TimeUnit
         return colorMap.maxByOrNull { it.value }?.key ?: Color.BLACK
     }
 
-    private fun createCustomWallpaperBitmap(
-        context: Context,
-        albumArt: Bitmap,
-        screenWidth: Int,
-        screenHeight: Int,
-        shapeType: String? = null
-    ): Bitmap {
-        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(wallpaperBitmap)
+        private suspend fun createCustomWallpaperBitmap(
+            context: Context,
+            albumArt: Bitmap,
+            screenWidth: Int,
+            screenHeight: Int,
+            shapeType: String? = null
+        ): Bitmap {
+            val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(wallpaperBitmap)
 
-        // Draw background with dominant color
-        val backgroundColor = getDominantColor(albumArt)
-        canvas.drawColor(backgroundColor)
+            // Draw background with dominant color
+            val backgroundColor = getDominantColor(albumArt)
+            canvas.drawColor(backgroundColor)
 
-        // Calculate sizes
-        val glassRectHeight = (screenHeight * 0.66).toInt()
-        val glassRectWidth = (screenWidth * 0.5).toInt()
+            // Calculate sizes
+            val glassRectHeight = (screenHeight * 0.66).toInt()
+            val glassRectWidth = (screenWidth * 0.5).toInt()
 
-        val artSize = (screenWidth * 0.4).toInt()
+            val artSize = (screenWidth * 0.4).toInt()
 
-        // Calculate positions
-        val glassRectLeft = (screenWidth - glassRectWidth) / 2f
-        val glassRectTop = (screenHeight - glassRectHeight) / 2f
-        val albumLeft = (screenWidth - artSize) / 2f
-        val albumTop = (screenHeight - artSize) / 2f
+            // Calculate positions
+            val glassRectLeft = (screenWidth - glassRectWidth) / 2f
+            val glassRectTop = (screenHeight - glassRectHeight) / 2f
+            val albumLeft = (screenWidth - artSize) / 2f
+            val albumTop = (screenHeight - artSize) / 2f
 
-        // Create glassmorphism effect - Fullscreen
-        val glassRect = RectF(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat())
+            // Create glassmorphism effect - Fullscreen
+            val glassRect = RectF(0f, 0f, screenWidth.toFloat(), screenHeight.toFloat())
 
-// 1. Draw blur layer
-        val blurPaint = Paint().apply {
-            isAntiAlias = true
-            maskFilter = BlurMaskFilter(35f, BlurMaskFilter.Blur.NORMAL)
-            color = Color.WHITE
-            alpha = 77 // 30% opacity
+            // 1. Draw blur layer
+            val blurPaint = Paint().apply {
+                isAntiAlias = true
+                maskFilter = BlurMaskFilter(35f, BlurMaskFilter.Blur.NORMAL)
+                color = Color.WHITE
+                alpha = 77 // 30% opacity
+            }
+            canvas.drawRoundRect(glassRect, 40f, 40f, blurPaint)
+
+            // 2. Draw glass gradient
+            val gradientPaint = Paint().apply {
+                isAntiAlias = true
+                shader = RadialGradient(
+                    glassRect.centerX(),
+                    glassRect.centerY(),
+                    glassRect.width().coerceAtLeast(glassRect.height()) * 0.96f,
+                    intArrayOf(
+                        Color.argb(120, 255, 255, 255), // 50% white
+                        Color.argb(85, 255, 255, 255),  // 30% white
+                        Color.argb(40, 255, 255, 255)   // 10% white
+                    ),
+                    floatArrayOf(0f, 0.5f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawRoundRect(glassRect, 40f, 40f, gradientPaint)
+
+            // 3. Draw subtle border
+            val borderPaint = Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+                color = Color.WHITE
+                alpha = 51 // 20% opacity
+            }
+            canvas.drawRoundRect(glassRect, 40f, 40f, borderPaint)
+
+            // 4. Optional: Remove or modify shadow if it's causing unwanted effects
+            val shadowPaint = Paint().apply {
+                isAntiAlias = true
+                maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.OUTER)
+                color = Color.TRANSPARENT // Set shadow to transparent if you don't want any tint
+            }
+            canvas.drawRoundRect(glassRect, 40f, 40f, shadowPaint)
+
+            // Draw the album art
+            val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
+            canvas.drawBitmap(scaledAlbumArt, albumLeft, albumTop, null)
+            shapeType?.let {
+                val currentSongName = SpotifyViewModel.currentlyPlaying ?: "Unknown Song"
+                drawShapes(canvas, albumLeft, albumTop, artSize, it, context, albumArt, screenWidth, screenHeight, currentSongName)
+            }
+
+            scaledAlbumArt.recycle()
+            return wallpaperBitmap
         }
-        canvas.drawRoundRect(glassRect, 40f, 40f, blurPaint)
-
-// 2. Draw glass gradient
-        val gradientPaint = Paint().apply {
-            isAntiAlias = true
-            shader = RadialGradient(
-                glassRect.centerX(),
-                glassRect.centerY(),
-                glassRect.width().coerceAtLeast(glassRect.height()) * 0.96f,
-                intArrayOf(
-                    Color.argb(120, 255, 255, 255), // 50% white
-                    Color.argb(85, 255, 255, 255),  // 30% white
-                    Color.argb(40, 255, 255, 255)   // 10% white
-                ),
-                floatArrayOf(0f, 0.5f, 1f),
-                Shader.TileMode.CLAMP
-            )
-        }
-        canvas.drawRoundRect(glassRect, 40f, 40f, gradientPaint)
-
-// 3. Draw subtle border
-        val borderPaint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.STROKE
-            strokeWidth = 2f
-            color = Color.WHITE
-            alpha = 51 // 20% opacity
-        }
-        canvas.drawRoundRect(glassRect, 40f, 40f, borderPaint)
-
-// 4. Draw shadow
-        // 4. Optional: Remove or modify shadow if it's causing unwanted effects
-        val shadowPaint = Paint().apply {
-            isAntiAlias = true
-            maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.OUTER)
-            color = Color.TRANSPARENT // Set shadow to transparent if you don't want any tint
-        }
-
-        canvas.drawRoundRect(glassRect, 40f, 40f, shadowPaint)
-
-
-        // Draw the album art
-        val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
-        canvas.drawBitmap(scaledAlbumArt, albumLeft, albumTop, null)
-        shapeType?.let {
-            drawShapes(canvas, albumLeft, albumTop, artSize, it)
-        }
-
-        scaledAlbumArt.recycle()
-        return wallpaperBitmap
-    }
 
     // Rest of the utility functions remain the same
-    fun getComplementaryColor(color: Int): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        hsv[0] = (hsv[0] + 180) % 360
-        return Color.HSVToColor(hsv)
-    }
 
     private fun isDarkColor(color: Int): Boolean {
         val darkness = 1 - (0.299 * Color.red(color) +
@@ -265,47 +273,49 @@ import java.util.concurrent.TimeUnit
         return Color.HSVToColor(hsv)
     }
 
-    fun createDesignA(
-        context: Context,
-        albumArt: Bitmap,
-        screenWidth: Int,
-        screenHeight: Int
-    ): Bitmap {
-        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(wallpaperBitmap)
+        fun createDesignA(
+            context: Context,
+            albumArt: Bitmap,
+            screenWidth: Int,
+            screenHeight: Int,
+            canvas: Canvas,
+            albumLeft: Float,
+            albumTop: Float,
+            artSize: Int,
+            songName: String
+        ) {
+            val paint = Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.FILL
+                textSize = 20f
+                color = Color.WHITE
+            }
 
-        // Design A: Minimalist with red accent
-        val backgroundColor = getDominantColor(albumArt)
-        canvas.drawColor(backgroundColor)
+            val radiusIncrement = 40f
+            var currentRadius = artSize / 2 + 20f
 
-        val artSize = (screenWidth * 0.4).toInt()
-        val albumLeft = (screenWidth - artSize) / 2f
-        val albumTop = (screenHeight - artSize) / 2f
+            for (i in 1..3) {
+                canvas.drawCircle(
+                    albumLeft + artSize / 2,
+                    albumTop + artSize / 2,
+                    currentRadius,
+                    paint
+                )
 
-        applyGlassmorphism(canvas, screenWidth, screenHeight)
+                paint.textAlign = Paint.Align.CENTER
+                canvas.drawText(
+                    songName,
+                    albumLeft + artSize / 2,
+                    albumTop + artSize / 2 - currentRadius,
+                    paint
+                )
 
-        val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
-        canvas.drawBitmap(scaledAlbumArt, albumLeft, albumTop, null)
-
-        val paint = Paint().apply {
-            isAntiAlias = true
-            style = Paint.Style.FILL
-            color = Color.RED
+                currentRadius += radiusIncrement
+            }
         }
 
-        val path = android.graphics.Path().apply {
-            moveTo(albumLeft + artSize/2, albumTop - 40f)
-            lineTo(albumLeft + artSize/2 - 30f, albumTop)
-            lineTo(albumLeft + artSize/2 + 30f, albumTop)
-            close()
-        }
-        canvas.drawPath(path, paint)
 
-        scaledAlbumArt.recycle()
-        return wallpaperBitmap
-    }
-
-    fun createDesignB(
+        fun createDesignB(
         context: Context,
         albumArt: Bitmap,
         screenWidth: Int,
@@ -463,6 +473,232 @@ import java.util.concurrent.TimeUnit
     }
 }
 
+
+
+// ViewModel
+class SpotifyViewModel : ViewModel() {
+    var isLoggedIn by mutableStateOf(false)
+        private set
+    var userName by mutableStateOf<String?>(null)
+        private set
+
+    var nowPlaying by mutableStateOf<String?>(null)
+        private set
+    var albumArtUrl by mutableStateOf<String?>(null)
+        private set
+    var selectedDesign by mutableStateOf<String?>(null)
+        private set
+    private var errorMessage by mutableStateOf<String?>(null)
+    private var isSettingWallpaper by mutableStateOf(false)
+        private set
+
+
+    private var accessToken: String? = null
+    private var pollingJob: Job? = null
+    private var lastAlbumArtUrl: String? = null
+    private var context: Context? = null
+
+    companion object {
+
+        var currentlyPlaying by mutableStateOf<String?>(null)
+
+        private const val DEFAULT_POLLING_INTERVAL = 200L // 3 seconds
+    }
+
+    private var pollingInterval = DEFAULT_POLLING_INTERVAL
+
+
+    fun updateWallpaper(designType: String) {
+        selectedDesign = designType
+        viewModelScope.launch {
+            albumArtUrl?.let { url ->
+                context?.let { ctx ->
+                    WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, designType)
+                }
+            }
+        }
+    }
+
+    fun initialize(appContext: Context) {
+        context = appContext.applicationContext
+    }
+
+    fun setPollingInterval(intervalMs: Long) {
+        pollingInterval = intervalMs
+        // Restart polling with new interval
+        if (isLoggedIn) {
+            startPollingCurrentTrack()
+        }
+    }
+
+    private fun startBackgroundWork(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val workRequest = PeriodicWorkRequestBuilder<SpotifyBackgroundWorker>(
+            pollingInterval, TimeUnit.MILLISECONDS,
+            PeriodicWorkRequest.MIN_PERIODIC_FLEX_MILLIS, TimeUnit.MILLISECONDS
+        )
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(context)
+            .enqueueUniquePeriodicWork(
+                SpotifyBackgroundWorker.WORK_NAME,
+                ExistingPeriodicWorkPolicy.REPLACE,
+                workRequest
+            )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun handleLoginResult(context: Context, response: AuthorizationResponse) {
+        when (response.type) {
+            AuthorizationResponse.Type.TOKEN -> {
+                viewModelScope.launch {
+                    try {
+                        // Save token to preferences for background worker
+                        context.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("access_token", response.accessToken)
+                            .apply()
+
+                        fetchUserData(response.accessToken)
+                        startForegroundService(context)
+                    } catch (e: Exception) {
+                        errorMessage = "Login failed: ${e.message}"
+                    }
+                }
+            }
+            AuthorizationResponse.Type.ERROR -> {
+                errorMessage = "Login failed: ${response.error}"
+            }
+            else -> {
+                errorMessage = "Login canceled"
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun startForegroundService(context: Context) {
+        val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
+            action = SpotifyForegroundService.ACTION_START
+        }
+        context.startForegroundService(serviceIntent)
+    }
+
+    private fun stopForegroundService(context: Context) {
+        val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
+            action = SpotifyForegroundService.ACTION_STOP
+        }
+        context.startService(serviceIntent)
+    }
+
+
+
+    private suspend fun fetchUserData(token: String) {
+        try {
+            accessToken = token
+            val profile = SpotifyApiClient.apiService.getUserProfile("Bearer $token")
+            userName = profile.display_name ?: profile.id
+            isLoggedIn = true
+            startPollingCurrentTrack()
+        } catch (e: Exception) {
+            errorMessage = "Failed to fetch user data: ${e.message}"
+            isLoggedIn = false
+        }
+    }
+
+    private fun startPollingCurrentTrack() {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch {
+            while (isActive) {
+                try {
+                    accessToken?.let { token ->
+                        val response = SpotifyApiClient.apiService.getCurrentlyPlaying("Bearer $token")
+                        response.item?.let { track ->
+                            currentlyPlaying = "${track.name} by ${track.artists.joinToString { it.name }}"
+                            albumArtUrl = track.album.images.firstOrNull()?.url
+
+                            context?.let { ctx ->
+                                albumArtUrl?.let { url ->
+                                    if (url != lastAlbumArtUrl) {
+                                        selectedDesign?.let { design ->
+                                            WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, design)
+                                        }
+                                        lastAlbumArtUrl = url
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "Failed to fetch current track: ${e.message}"
+                }
+                delay(pollingInterval)
+            }
+        }
+    }
+
+
+    suspend fun updateWallpaper(context: Context, imageUrl: String) {
+        isSettingWallpaper = true
+        try {
+            WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl)
+                .onSuccess {
+                    errorMessage = null
+                }
+                .onFailure {
+                    errorMessage = "Failed to set wallpaper: ${it.message}"
+                }
+        } finally {
+            isSettingWallpaper = false
+        }
+    }
+
+    fun onLogout() {
+        pollingJob?.cancel()
+        accessToken = null
+        isLoggedIn = false
+        userName = null
+        currentlyPlaying = null
+        albumArtUrl = null
+        lastAlbumArtUrl = null
+
+        context?.let { ctx ->
+            stopForegroundService(ctx)
+            // Clear preferences
+            ctx.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .clear()
+                .apply()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        pollingJob?.cancel()
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // API Client
     object SpotifyApiClient {
         private const val BASE_URL = "https://api.spotify.com/v1/"
@@ -486,208 +722,6 @@ import java.util.concurrent.TimeUnit
         suspend fun getCurrentlyPlaying(
             @Header("Authorization") accessToken: String
         ): CurrentlyPlaying
-    }
-
-    // ViewModel
-    class SpotifyViewModel : ViewModel() {
-        var isLoggedIn by mutableStateOf(false)
-            private set
-        var userName by mutableStateOf<String?>(null)
-            private set
-        var currentlyPlaying by mutableStateOf<String?>(null)
-            private set
-        var albumArtUrl by mutableStateOf<String?>(null)
-            private set
-        var selectedDesign by mutableStateOf<String?>(null)
-            private set
-        private var errorMessage by mutableStateOf<String?>(null)
-        private var isSettingWallpaper by mutableStateOf(false)
-            private set
-
-
-        private var accessToken: String? = null
-        private var pollingJob: Job? = null
-        private var lastAlbumArtUrl: String? = null
-        private var context: Context? = null
-
-        companion object {
-            private const val DEFAULT_POLLING_INTERVAL = 200L // 3 seconds
-        }
-
-        private var pollingInterval = DEFAULT_POLLING_INTERVAL
-
-
-        fun updateWallpaper(designType: String) {
-            selectedDesign = designType
-            viewModelScope.launch {
-                albumArtUrl?.let { url ->
-                    context?.let { ctx ->
-                        WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, designType)
-                    }
-                }
-            }
-        }
-
-        fun initialize(appContext: Context) {
-            context = appContext.applicationContext
-        }
-
-        fun setPollingInterval(intervalMs: Long) {
-            pollingInterval = intervalMs
-            // Restart polling with new interval
-            if (isLoggedIn) {
-                startPollingCurrentTrack()
-            }
-        }
-
-        private fun startBackgroundWork(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val workRequest = PeriodicWorkRequestBuilder<SpotifyBackgroundWorker>(
-                pollingInterval, TimeUnit.MILLISECONDS,
-                PeriodicWorkRequest.MIN_PERIODIC_FLEX_MILLIS, TimeUnit.MILLISECONDS
-            )
-                .setConstraints(constraints)
-                .build()
-
-            WorkManager.getInstance(context)
-                .enqueueUniquePeriodicWork(
-                    SpotifyBackgroundWorker.WORK_NAME,
-                    ExistingPeriodicWorkPolicy.REPLACE,
-                    workRequest
-                )
-        }
-
-        @RequiresApi(Build.VERSION_CODES.O)
-        fun handleLoginResult(context: Context, response: AuthorizationResponse) {
-            when (response.type) {
-                AuthorizationResponse.Type.TOKEN -> {
-                    viewModelScope.launch {
-                        try {
-                            // Save token to preferences for background worker
-                            context.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
-                                .edit()
-                                .putString("access_token", response.accessToken)
-                                .apply()
-
-                            fetchUserData(response.accessToken)
-                            startForegroundService(context)
-                        } catch (e: Exception) {
-                            errorMessage = "Login failed: ${e.message}"
-                        }
-                    }
-                }
-                AuthorizationResponse.Type.ERROR -> {
-                    errorMessage = "Login failed: ${response.error}"
-                }
-                else -> {
-                    errorMessage = "Login canceled"
-                }
-            }
-        }
-
-        @RequiresApi(Build.VERSION_CODES.O)
-        private fun startForegroundService(context: Context) {
-            val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
-                action = SpotifyForegroundService.ACTION_START
-            }
-            context.startForegroundService(serviceIntent)
-        }
-
-        private fun stopForegroundService(context: Context) {
-            val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
-                action = SpotifyForegroundService.ACTION_STOP
-            }
-            context.startService(serviceIntent)
-        }
-
-
-
-        private suspend fun fetchUserData(token: String) {
-            try {
-                accessToken = token
-                val profile = SpotifyApiClient.apiService.getUserProfile("Bearer $token")
-                userName = profile.display_name ?: profile.id
-                isLoggedIn = true
-                startPollingCurrentTrack()
-            } catch (e: Exception) {
-                errorMessage = "Failed to fetch user data: ${e.message}"
-                isLoggedIn = false
-            }
-        }
-
-        private fun startPollingCurrentTrack() {
-            pollingJob?.cancel()
-            pollingJob = viewModelScope.launch {
-                while (isActive) {
-                    try {
-                        accessToken?.let { token ->
-                            val response = SpotifyApiClient.apiService.getCurrentlyPlaying("Bearer $token")
-                            response.item?.let { track ->
-                                currentlyPlaying = "${track.name} by ${track.artists.joinToString { it.name }}"
-                                albumArtUrl = track.album.images.firstOrNull()?.url
-
-                                context?.let { ctx ->
-                                    albumArtUrl?.let { url ->
-                                        if (url != lastAlbumArtUrl) {
-                                            selectedDesign?.let { design ->
-                                                WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, design)
-                                            }
-                                            lastAlbumArtUrl = url
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        errorMessage = "Failed to fetch current track: ${e.message}"
-                    }
-                    delay(pollingInterval)
-                }
-            }
-        }
-
-
-        suspend fun updateWallpaper(context: Context, imageUrl: String) {
-            isSettingWallpaper = true
-            try {
-                WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl)
-                    .onSuccess {
-                        errorMessage = null
-                    }
-                    .onFailure {
-                        errorMessage = "Failed to set wallpaper: ${it.message}"
-                    }
-            } finally {
-                isSettingWallpaper = false
-            }
-        }
-
-        fun onLogout() {
-            pollingJob?.cancel()
-            accessToken = null
-            isLoggedIn = false
-            userName = null
-            currentlyPlaying = null
-            albumArtUrl = null
-            lastAlbumArtUrl = null
-
-            context?.let { ctx ->
-                stopForegroundService(ctx)
-                // Clear preferences
-                ctx.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
-                    .edit()
-                    .clear()
-                    .apply()
-            }
-        }
-
-        override fun onCleared() {
-            super.onCleared()
-            pollingJob?.cancel()
-        }
     }
 
 

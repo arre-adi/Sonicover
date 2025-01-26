@@ -80,7 +80,7 @@ fun LandingPage(viewModel: SpotifyViewModel) {
                         fontSize = 16.sp
                     )
                     Text(
-                        text = "${viewModel.currentlyPlaying}",
+                        text = "${viewModel.nowPlaying}",
                         modifier = Modifier.padding(top = 4.dp)
                     )
                     Text(

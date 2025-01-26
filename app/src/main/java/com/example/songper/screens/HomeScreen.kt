@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -96,7 +97,7 @@ fun WelcomeScreen(viewModel: SpotifyViewModel) {
                         fontSize = 16.sp
                     )
                     Text(
-                        text = "${viewModel.currentlyPlaying}",
+                        text = "${viewModel.nowPlaying}",
                         modifier = Modifier.padding(top = 4.dp)
                     )
                     Text(
@@ -181,75 +182,8 @@ fun WelcomeScreen(viewModel: SpotifyViewModel) {
             }
         }
     }
-
-
-
-
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp),
-//        verticalArrangement = Arrangement.Center,
-//        horizontalAlignment = Alignment.CenterHorizontally
-//    ) {
-//        Text(
-//            text = "Hello, ${viewModel.userName}!",
-//            fontSize = 24.sp,
-//            textAlign = TextAlign.Center
-//        )
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        // Album Artwork
-//        viewModel.albumArtUrl?.let { url ->
-//            AsyncImage(
-//                model = url,
-//                contentDescription = "Album Artwork",
-//                modifier = Modifier
-//                    .size(200.dp)
-//                    .clip(RoundedCornerShape(8.dp)),
-//                contentScale = ContentScale.Crop
-//            )
-//        }
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//        Text(
-//            text = "Currently Playing:\n${viewModel.currentlyPlaying}",
-//            fontSize = 18.sp,
-//            textAlign = TextAlign.Center
-//        )
-//        Spacer(modifier = Modifier.height(32.dp))
-//        Button(onClick = { viewModel.onLogout() }) {
-//            Text("Logout")
-//        }
-//
-//
-//        Row(
-//            horizontalArrangement = Arrangement.SpaceEvenly,
-//            modifier = Modifier.fillMaxWidth()
-//        ) {
-//            Box(
-//                modifier = Modifier
-//                    .size(100.dp)
-//                    .background(Color.Gray)
-//                    .clickable { viewModel.updateWallpaper("A") }
-//            ) { Text("A") }
-//
-//            Box(
-//                modifier = Modifier
-//                    .size(100.dp)
-//                    .background(Color.Gray)
-//                    .clickable { viewModel.updateWallpaper("B") }
-//            ) { Text("B") }
-//
-//            Box(
-//                modifier = Modifier
-//                    .size(100.dp)
-//                    .background(Color.Gray)
-//                    .clickable { viewModel.updateWallpaper("C") }
-//            ) { Text("C") }
-//        }
-//    }
 }
+
 
 
 

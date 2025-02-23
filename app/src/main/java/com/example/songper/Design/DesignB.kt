@@ -4,8 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Shader
 import com.example.songper.viewModel.WallpaperDesigns.createCircularBitmap
+import com.example.songper.viewModel.WallpaperUtil
 import kotlin.random.Random
 
 fun createDesignB(
@@ -17,8 +20,26 @@ fun createDesignB(
     val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(wallpaperBitmap)
 
-    // Fill with a light background
-    canvas.drawColor(Color.WHITE)
+    val colorExtractor = WallpaperUtil.ColorExtractor()
+    val colors = colorExtractor.extractGradientColors(albumArt)
+    val dominantColor = colors.startColor
+
+    val lightColor = Color.argb(
+        255,
+        Color.red(dominantColor) + 50,
+        Color.green(dominantColor) + 50,
+        Color.blue(dominantColor) + 50
+    )
+
+    val gradient = LinearGradient(
+        0f, 0f,
+        screenWidth.toFloat(), screenHeight.toFloat(),
+        dominantColor,
+        lightColor,
+        Shader.TileMode.CLAMP
+    )
+    val backgroundPaint = Paint().apply { shader = gradient }
+    canvas.drawPaint(backgroundPaint)
 
     // Create red polka dots
     val dotPaint = Paint().apply {

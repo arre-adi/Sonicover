@@ -36,6 +36,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.palette.graphics.Palette
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -46,25 +47,72 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import java.net.URL
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.random.Random
 
 
     object WallpaperUtil {
-    fun getDominantColor(bitmap: Bitmap): Int {
-        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
-        val colorMap = HashMap<Int, Int>()
 
-        for (y in 0 until resizedBitmap.height) {
-            for (x in 0 until resizedBitmap.width) {
-                val color = resizedBitmap.getPixel(x, y)
-                if (Color.alpha(color) < 128) continue
-                colorMap[color] = colorMap.getOrDefault(color, 0) + 1
+            class ColorExtractor {
+                data class GradientColors(
+                    val startColor: Int,
+                    val midColor: Int,
+                    val endColor: Int,
+                    val isLight: Boolean
+                )
+
+                companion object {
+                    private const val DARKER_FACTOR = 0.5f  // Increased darkness for bottom color
+                    private const val MID_DARKNESS_FACTOR = 0.8f  // Slight darkness for middle
+                }
+
+                fun extractGradientColors(bitmap: Bitmap): GradientColors {
+                    val palette = Palette.from(bitmap).generate()
+
+                    // Get the dominant/vibrant color
+                    val dominantColor = palette.getVibrantColor(
+                        palette.getDominantColor(Color.BLACK)
+                    )
+
+                    // Create mid and darker variants
+                    val midColor = createMidColor(dominantColor)
+                    val darkerColor = createDarkerColor(dominantColor)
+
+                    return GradientColors(
+                        startColor = dominantColor,
+                        midColor = midColor,
+                        endColor = darkerColor,
+                        isLight = isColorLight(dominantColor)
+                    )
+                }
+
+                private fun createMidColor(color: Int): Int {
+                    val hsv = FloatArray(3)
+                    Color.colorToHSV(color, hsv)
+
+                    // Slightly reduce brightness for mid tone
+                    hsv[2] *= MID_DARKNESS_FACTOR
+
+                    return Color.HSVToColor(hsv)
+                }
+
+                private fun createDarkerColor(color: Int): Int {
+                    val hsv = FloatArray(3)
+                    Color.colorToHSV(color, hsv)
+
+                    // Significantly reduce brightness for bottom color
+                    hsv[2] *= DARKER_FACTOR
+
+                    return Color.HSVToColor(hsv)
+                }
+
+                private fun isColorLight(color: Int): Boolean {
+                    val darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255
+                    return darkness < 0.5
+                }
             }
-        }
 
-        resizedBitmap.recycle()
-        return colorMap.maxByOrNull { it.value }?.key ?: Color.BLACK
-    }
 
     suspend fun setCustomWallpaperFromUrl(
         context: Context,
@@ -119,24 +167,27 @@ import kotlin.random.Random
         val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(wallpaperBitmap)
 
-        // Create background with dominant color
-        val dominantColor = getDominantColor(albumArt)
-        val lightColor = Color.argb(
-            255,
-            Color.red(dominantColor) + 50,
-            Color.green(dominantColor) + 50,
-            Color.blue(dominantColor) + 50
-        )
+        // Get the three gradient colors
+        val colorExtractor = WallpaperUtil.ColorExtractor()
+        val colors = colorExtractor.extractGradientColors(albumArt)
 
+        // Create three-color gradient
         val gradient = LinearGradient(
-            0f, 0f,
-            screenWidth.toFloat(), screenHeight.toFloat(),
-            dominantColor,
-            lightColor,
+            0f, 0f, // x0, y0 (top)
+            0f, screenHeight.toFloat(), // x1, y1 (bottom)
+            intArrayOf(
+                colors.startColor,
+                colors.midColor,
+                colors.endColor
+            ),
+            floatArrayOf(0f, 0.5f, 1f), // Position each color at 0%, 50%, and 100%
             Shader.TileMode.CLAMP
         )
+
         val backgroundPaint = Paint().apply { shader = gradient }
         canvas.drawPaint(backgroundPaint)
+
+
 
         // Draw album art
         val artSize = (screenWidth * 0.4).toInt()

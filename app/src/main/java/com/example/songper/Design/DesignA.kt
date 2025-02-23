@@ -20,7 +20,10 @@ fun createDesignA(
     val canvas = Canvas(wallpaperBitmap)
 
     // Create a subtle background gradient
-    val dominantColor = WallpaperUtil.getDominantColor(albumArt)
+    val colorExtractor = WallpaperUtil.ColorExtractor()
+    val colors = colorExtractor.extractGradientColors(albumArt)
+    val dominantColor = colors.startColor
+
     val lightColor = Color.argb(
         255,
         Color.red(dominantColor) + 50,

@@ -28,4 +28,3 @@ data class Image(
     val height: Int,
     val width: Int
 )
-

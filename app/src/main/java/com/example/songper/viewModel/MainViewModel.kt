@@ -23,17 +23,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.converter.gson.GsonConverterFactory
 import android.graphics.Bitmap
-import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
-import android.graphics.RadialGradient
-import android.graphics.RectF
 import android.graphics.Shader
-import android.graphics.Typeface
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.palette.graphics.Palette
@@ -47,9 +43,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import java.net.URL
 import java.util.concurrent.TimeUnit
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.random.Random
 
 
     object WallpaperUtil {
@@ -114,52 +107,56 @@ import kotlin.random.Random
             }
 
 
-    suspend fun setCustomWallpaperFromUrl(
-        context: Context,
-        imageUrl: String,
-        designType: String? = null
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val wallpaperManager = WallpaperManager.getInstance(context)
-            val displayMetrics = context.resources.displayMetrics
-            val albumArtBitmap = BitmapFactory.decodeStream(URL(imageUrl).openStream())
+        suspend fun setCustomWallpaperFromUrl(
+            context: Context,
+            imageUrl: String,
+            designType: String? = null,
+            songName: String? = null
+        ): Result<Unit> = withContext(Dispatchers.IO) {
+            try {
+                val wallpaperManager = WallpaperManager.getInstance(context)
+                val displayMetrics = context.resources.displayMetrics
+                val albumArtBitmap = BitmapFactory.decodeStream(URL(imageUrl).openStream())
 
-            val wallpaperBitmap = when (designType) {
-                "A" -> WallpaperDesigns.createDesignA(
-                    context,
-                    albumArtBitmap,
-                    displayMetrics.widthPixels,
-                    displayMetrics.heightPixels
-                )
-                "B" -> WallpaperDesigns.createDesignB(
-                    context,
-                    albumArtBitmap,
-                    displayMetrics.widthPixels,
-                    displayMetrics.heightPixels
-                )
-                "C" -> WallpaperDesigns.createDesignC(
-                    context,
-                    albumArtBitmap,
-                    displayMetrics.widthPixels,
-                    displayMetrics.heightPixels
-                )
-                else -> createDefaultWallpaperBitmap(
-                    albumArtBitmap,
-                    displayMetrics.widthPixels,
-                    displayMetrics.heightPixels
-                )
+                val wallpaperBitmap = when (designType) {
+                    "A" -> WallpaperDesigns.createDesignA(
+                        context,
+                        albumArtBitmap,
+                        displayMetrics.widthPixels,
+                        displayMetrics.heightPixels,
+                        songName ?: "Unknown Song"
+                    )
+                    "B" -> WallpaperDesigns.createDesignB(
+                        context,
+                        albumArtBitmap,
+                        displayMetrics.widthPixels,
+                        displayMetrics.heightPixels
+                    )
+                    "C" -> WallpaperDesigns.createDesignC(
+                        context,
+                        albumArtBitmap,
+                        displayMetrics.widthPixels,
+                        displayMetrics.heightPixels
+                    )
+                    else -> createDefaultWallpaperBitmap(
+                        albumArtBitmap,
+                        displayMetrics.widthPixels,
+                        displayMetrics.heightPixels
+                    )
+                }
+
+                wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
+                albumArtBitmap.recycle()
+                wallpaperBitmap.recycle()
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
             }
-
-            wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
-            albumArtBitmap.recycle()
-            wallpaperBitmap.recycle()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
-    }
 
-    private fun createDefaultWallpaperBitmap(
+
+
+        private fun createDefaultWallpaperBitmap(
         albumArt: Bitmap,
         screenWidth: Int,
         screenHeight: Int
@@ -205,7 +202,7 @@ import kotlin.random.Random
         return wallpaperBitmap
     }
 
-    private fun createCircularBitmap(source: Bitmap): Bitmap {
+    fun createCircularBitmap(source: Bitmap): Bitmap {
         val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
 
@@ -230,45 +227,45 @@ import kotlin.random.Random
 }
 
     object WallpaperDesigns {
-        fun createDesignA(
-            context: Context,
-            albumArt: Bitmap,
-            screenWidth: Int,
-            screenHeight: Int
-        ): Bitmap = com.example.songper.Design.createDesignA(
-            context,
-            albumArt,
-            screenWidth,
-            screenHeight
-        )
+    fun createDesignA(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int,
+        songName: String
+    ): Bitmap = com.example.songper.Design.createDesignA(
+        context,
+        albumArt,
+        screenWidth,
+        screenHeight,
+        songName
+    )
 
+    fun createDesignB(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Bitmap = com.example.songper.Design.createDesignB(
+        context,
+        albumArt,
+        screenWidth,
+        screenHeight
+    )
 
+    fun createDesignC(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int
+    ): Bitmap = com.example.songper.Design.createDesignC(
+        context,
+        albumArt,
+        screenWidth,
+        screenHeight
+    )
 
-        fun createDesignB(
-            context: Context,
-            albumArt: Bitmap,
-            screenWidth: Int,
-            screenHeight: Int
-        ): Bitmap = com.example.songper.Design.createDesignB(
-            context,
-            albumArt,
-            screenWidth,
-            screenHeight
-        )
-
-        fun createDesignC(
-            context: Context,
-            albumArt: Bitmap,
-            screenWidth: Int,
-            screenHeight: Int
-        ): Bitmap = com.example.songper.Design.createDesignC(
-            context,
-            albumArt,
-            screenWidth,
-            screenHeight
-        )
-
-    public fun createCircularBitmap(source: Bitmap): Bitmap {
+    fun createCircularBitmap(source: Bitmap): Bitmap {
         val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
 
@@ -295,215 +292,214 @@ import kotlin.random.Random
 
     // ViewModel
     class SpotifyViewModel : ViewModel() {
-    var isLoggedIn by mutableStateOf(false)
-        private set
-    var userName by mutableStateOf<String?>(null)
-        private set
+        var isLoggedIn by mutableStateOf(false)
+            private set
+        var userName by mutableStateOf<String?>(null)
+            private set
 
-    var nowPlaying by mutableStateOf<String?>(null)
-        private set
-    var albumArtUrl by mutableStateOf<String?>(null)
-        private set
-    var selectedDesign by mutableStateOf<String?>(null)
-        private set
-    private var errorMessage by mutableStateOf<String?>(null)
-    private var isSettingWallpaper by mutableStateOf(false)
-        private set
+        var nowPlaying by mutableStateOf<String?>(null)
+            private set
+        var albumArtUrl by mutableStateOf<String?>(null)
+            private set
+        var selectedDesign by mutableStateOf<String?>(null)
+            private set
+        private var errorMessage by mutableStateOf<String?>(null)
+        private var isSettingWallpaper by mutableStateOf(false)
+            private set
 
+        private var accessToken: String? = null
+        private var pollingJob: Job? = null
+        private var lastAlbumArtUrl: String? = null
+        private var context: Context? = null
 
-    private var accessToken: String? = null
-    private var pollingJob: Job? = null
-    private var lastAlbumArtUrl: String? = null
-    private var context: Context? = null
+        companion object {
+            var currentlyPlaying by mutableStateOf<CurrentlyPlaying?>(null)
+                private set
 
-    companion object {
+            private const val DEFAULT_POLLING_INTERVAL = 200L // 3 seconds
+        }
 
-        var currentlyPlaying by mutableStateOf<String?>(null)
+        private var pollingInterval = DEFAULT_POLLING_INTERVAL
 
-        private const val DEFAULT_POLLING_INTERVAL = 200L // 3 seconds
-    }
+        fun updateWallpaper(designType: String) {
+            selectedDesign = designType
+            context?.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                ?.edit()
+                ?.putString("selected_design", designType)
+                ?.apply()
 
-    private var pollingInterval = DEFAULT_POLLING_INTERVAL
-
-
-    fun updateWallpaper(designType: String) {
-        selectedDesign = designType
-        viewModelScope.launch {
-            albumArtUrl?.let { url ->
-                context?.let { ctx ->
-                    try {
-                        WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, designType)
-                        // Optional: Add success handling
-                    } catch (e: Exception) {
-                        errorMessage = "Failed to set wallpaper: ${e.message}"
+            viewModelScope.launch {
+                albumArtUrl?.let { url ->
+                    context?.let { ctx ->
+                        try {
+                            val songName = currentlyPlaying?.item?.name ?: "Unknown Song"
+                            WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, designType, songName)
+                            // Optional: Add success handling
+                        } catch (e: Exception) {
+                            errorMessage = "Failed to set wallpaper: ${e.message}"
+                        }
                     }
                 }
             }
         }
-    }
 
-    fun initialize(appContext: Context) {
-        context = appContext.applicationContext
-    }
-
-    fun setPollingInterval(intervalMs: Long) {
-        pollingInterval = intervalMs
-        // Restart polling with new interval
-        if (isLoggedIn) {
-            startPollingCurrentTrack()
+        fun initialize(appContext: Context) {
+            context = appContext.applicationContext
         }
-    }
 
-    private fun startBackgroundWork(context: Context) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        fun setPollingInterval(intervalMs: Long) {
+            pollingInterval = intervalMs
+            // Restart polling with new interval
+            if (isLoggedIn) {
+                startPollingCurrentTrack()
+            }
+        }
 
-        val workRequest = PeriodicWorkRequestBuilder<SpotifyBackgroundWorker>(
-            pollingInterval, TimeUnit.MILLISECONDS,
-            PeriodicWorkRequest.MIN_PERIODIC_FLEX_MILLIS, TimeUnit.MILLISECONDS
-        )
-            .setConstraints(constraints)
-            .build()
+        private fun startBackgroundWork(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-        WorkManager.getInstance(context)
-            .enqueueUniquePeriodicWork(
-                SpotifyBackgroundWorker.WORK_NAME,
-                ExistingPeriodicWorkPolicy.REPLACE,
-                workRequest
+            val workRequest = PeriodicWorkRequestBuilder<SpotifyBackgroundWorker>(
+                pollingInterval, TimeUnit.MILLISECONDS,
+                PeriodicWorkRequest.MIN_PERIODIC_FLEX_MILLIS, TimeUnit.MILLISECONDS
             )
-    }
+                .setConstraints(constraints)
+                .build()
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun handleLoginResult(context: Context, response: AuthorizationResponse) {
-        when (response.type) {
-            AuthorizationResponse.Type.TOKEN -> {
-                viewModelScope.launch {
-                    try {
-                        // Save token to preferences for background worker
-                        context.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
-                            .edit()
-                            .putString("access_token", response.accessToken)
-                            .apply()
+            WorkManager.getInstance(context)
+                .enqueueUniquePeriodicWork(
+                    SpotifyBackgroundWorker.WORK_NAME,
+                    ExistingPeriodicWorkPolicy.REPLACE,
+                    workRequest
+                )
+        }
 
-                        fetchUserData(response.accessToken)
-                        startForegroundService(context)
-                    } catch (e: Exception) {
-                        errorMessage = "Login failed: ${e.message}"
+        @RequiresApi(Build.VERSION_CODES.O)
+        fun handleLoginResult(context: Context, response: AuthorizationResponse) {
+            when (response.type) {
+                AuthorizationResponse.Type.TOKEN -> {
+                    viewModelScope.launch {
+                        try {
+                            // Save token to preferences for background worker
+                            context.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                                .edit()
+                                .putString("access_token", response.accessToken)
+                                .apply()
+
+                            fetchUserData(response.accessToken)
+                            startForegroundService(context)
+                        } catch (e: Exception) {
+                            errorMessage = "Login failed: ${e.message}"
+                        }
                     }
                 }
+                AuthorizationResponse.Type.ERROR -> {
+                    errorMessage = "Login failed: ${response.error}"
+                }
+                else -> {
+                    errorMessage = "Login canceled"
+                }
             }
-            AuthorizationResponse.Type.ERROR -> {
-                errorMessage = "Login failed: ${response.error}"
+        }
+
+        @RequiresApi(Build.VERSION_CODES.O)
+        private fun startForegroundService(context: Context) {
+            val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
+                action = SpotifyForegroundService.ACTION_START
             }
-            else -> {
-                errorMessage = "Login canceled"
+            context.startForegroundService(serviceIntent)
+        }
+
+        private fun stopForegroundService(context: Context) {
+            val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
+                action = SpotifyForegroundService.ACTION_STOP
+            }
+            context.startService(serviceIntent)
+        }
+
+        private suspend fun fetchUserData(token: String) {
+            try {
+                accessToken = token
+                val profile = SpotifyApiClient.apiService.getUserProfile("Bearer $token")
+                userName = profile.display_name ?: profile.id
+                isLoggedIn = true
+                startPollingCurrentTrack()
+            } catch (e: Exception) {
+                errorMessage = "Failed to fetch user data: ${e.message}"
+                isLoggedIn = false
             }
         }
-    }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun startForegroundService(context: Context) {
-        val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
-            action = SpotifyForegroundService.ACTION_START
-        }
-        context.startForegroundService(serviceIntent)
-    }
+        private fun startPollingCurrentTrack() {
+            pollingJob?.cancel()
+            pollingJob = viewModelScope.launch {
+                while (isActive) {
+                    try {
+                        accessToken?.let { token ->
+                            val response = SpotifyApiClient.apiService.getCurrentlyPlaying("Bearer $token")
+                            response.item?.let { track ->
+                                currentlyPlaying = CurrentlyPlaying(track, response.is_playing)
+                                albumArtUrl = track.album.images.firstOrNull()?.url
 
-    private fun stopForegroundService(context: Context) {
-        val serviceIntent = Intent(context, SpotifyForegroundService::class.java).apply {
-            action = SpotifyForegroundService.ACTION_STOP
-        }
-        context.startService(serviceIntent)
-    }
-
-
-
-    private suspend fun fetchUserData(token: String) {
-        try {
-            accessToken = token
-            val profile = SpotifyApiClient.apiService.getUserProfile("Bearer $token")
-            userName = profile.display_name ?: profile.id
-            isLoggedIn = true
-            startPollingCurrentTrack()
-        } catch (e: Exception) {
-            errorMessage = "Failed to fetch user data: ${e.message}"
-            isLoggedIn = false
-        }
-    }
-
-    private fun startPollingCurrentTrack() {
-        pollingJob?.cancel()
-        pollingJob = viewModelScope.launch {
-            while (isActive) {
-                try {
-                    accessToken?.let { token ->
-                        val response = SpotifyApiClient.apiService.getCurrentlyPlaying("Bearer $token")
-                        response.item?.let { track ->
-                            currentlyPlaying = "${track.name} by ${track.artists.joinToString { it.name }}"
-                            albumArtUrl = track.album.images.firstOrNull()?.url
-
-                            context?.let { ctx ->
-                                albumArtUrl?.let { url ->
-                                    if (url != lastAlbumArtUrl) {
-                                        selectedDesign?.let { design ->
+                                context?.let { ctx ->
+                                    albumArtUrl?.let { url ->
+                                        if (url != lastAlbumArtUrl) {
+                                            val design = selectedDesign ?: "default"
                                             WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, design)
+                                            lastAlbumArtUrl = url
                                         }
-                                        lastAlbumArtUrl = url
                                     }
                                 }
                             }
                         }
+                    } catch (e: Exception) {
+                        errorMessage = "Failed to fetch current track: ${e.message}"
                     }
-                } catch (e: Exception) {
-                    errorMessage = "Failed to fetch current track: ${e.message}"
+                    delay(pollingInterval)
                 }
-                delay(pollingInterval)
             }
         }
-    }
 
+        suspend fun updateWallpaper(context: Context, imageUrl: String) {
+            isSettingWallpaper = true
+            try {
+                WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl)
+                    .onSuccess {
+                        errorMessage = null
+                    }
+                    .onFailure {
+                        errorMessage = "Failed to set wallpaper: ${it.message}"
+                    }
+            } finally {
+                isSettingWallpaper = false
+            }
+        }
 
-    suspend fun updateWallpaper(context: Context, imageUrl: String) {
-        isSettingWallpaper = true
-        try {
-            WallpaperUtil.setCustomWallpaperFromUrl(context, imageUrl)
-                .onSuccess {
-                    errorMessage = null
-                }
-                .onFailure {
-                    errorMessage = "Failed to set wallpaper: ${it.message}"
-                }
-        } finally {
-            isSettingWallpaper = false
+        fun onLogout() {
+            pollingJob?.cancel()
+            accessToken = null
+            isLoggedIn = false
+            userName = null
+            currentlyPlaying = null
+            albumArtUrl = null
+            lastAlbumArtUrl = null
+
+            context?.let { ctx ->
+                stopForegroundService(ctx)
+                // Clear preferences
+                ctx.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+            }
+        }
+
+        override fun onCleared() {
+            super.onCleared()
+            pollingJob?.cancel()
         }
     }
-
-    fun onLogout() {
-        pollingJob?.cancel()
-        accessToken = null
-        isLoggedIn = false
-        userName = null
-        currentlyPlaying = null
-        albumArtUrl = null
-        lastAlbumArtUrl = null
-
-        context?.let { ctx ->
-            stopForegroundService(ctx)
-            // Clear preferences
-            ctx.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
-                .edit()
-                .clear()
-                .apply()
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        pollingJob?.cancel()
-    }
-}
-
 
 
     // API Client
@@ -518,6 +514,7 @@ import kotlin.random.Random
         val apiService: SpotifyApiService = retrofit.create(SpotifyApiService::class.java)
     }
 
+
     // API Interface
     interface SpotifyApiService {
         @GET("me")
@@ -531,6 +528,7 @@ import kotlin.random.Random
         ): CurrentlyPlaying
     }
 
+
     class SpotifyBackgroundWorker(
     context: Context,
     workerParameters: WorkerParameters
@@ -538,35 +536,37 @@ import kotlin.random.Random
 
     private val apiService = SpotifyApiClient.apiService
 
-    override suspend fun doWork(): Result {
-        return withContext(Dispatchers.IO) {
-            try {
-                val sharedPrefs = applicationContext.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
-                val accessToken = sharedPrefs.getString("access_token", null) ?: return@withContext Result.failure()
+        override suspend fun doWork(): Result {
+            return withContext(Dispatchers.IO) {
+                try {
+                    val sharedPrefs = applicationContext.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                    val accessToken = sharedPrefs.getString("access_token", null) ?: return@withContext Result.failure()
 
-                val response = apiService.getCurrentlyPlaying("Bearer $accessToken")
+                    val response = apiService.getCurrentlyPlaying("Bearer $accessToken")
 
-                response.item?.let { track ->
-                    val albumArtUrl = track.album.images.firstOrNull()?.url
+                    response.item?.let { track ->
+                        val albumArtUrl = track.album.images.firstOrNull()?.url
 
-                    val lastAlbumArtUrl = sharedPrefs.getString("last_album_art_url", null)
+                        val lastAlbumArtUrl = sharedPrefs.getString("last_album_art_url", null)
 
-                    if (albumArtUrl != null && albumArtUrl != lastAlbumArtUrl) {
-                        WallpaperUtil.setCustomWallpaperFromUrl(applicationContext, albumArtUrl)
-                            .onSuccess {
-                                sharedPrefs.edit().putString("last_album_art_url", albumArtUrl).apply()
-                            }
+                        if (albumArtUrl != null && albumArtUrl != lastAlbumArtUrl) {
+                            val design = sharedPrefs.getString("selected_design", "default")
+                            WallpaperUtil.setCustomWallpaperFromUrl(applicationContext, albumArtUrl, design)
+                                .onSuccess {
+                                    sharedPrefs.edit().putString("last_album_art_url", albumArtUrl).apply()
+                                }
+                        }
                     }
-                }
 
-                Result.success()
-            } catch (e: Exception) {
-                Result.failure()
+                    Result.success()
+                } catch (e: Exception) {
+                    Result.failure()
+                }
             }
         }
-    }
 
-    companion object {
+
+        companion object {
         const val WORK_NAME = "spotify_background_work"
     }
 }

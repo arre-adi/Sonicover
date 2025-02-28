@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.example.songper.viewModel.WallpaperUtil
@@ -55,42 +56,110 @@ fun createDesignA(
 
     canvas.drawBitmap(circularAlbumArt, albumLeft, albumTop, null)
 
-    scaledAlbumArt.recycle()
-    circularAlbumArt.recycle()
-
-    // Draw circular text in a spiral pattern
-    val textPaint = Paint().apply {
+    // Define text paint based on background color
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = if (colors.isLight) Color.BLACK else Color.WHITE
         textSize = 50f
         typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
     }
 
+    val innerTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = if (colors.isLight) Color.BLACK else Color.WHITE
+        textSize = 45f
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+
+    // Calculate center points
     val centerX = screenWidth / 2f
     val centerY = screenHeight / 2f
-    val initialRadius = (screenWidth.coerceAtMost(screenHeight) / 2f) * 0.5f
-    val radiusIncrement = 1.2f
+    val baseRadius = artSize / 2f // Base radius is half the album art size
 
-    val totalRows = 6
+    // Define the radii for concentric circles
+    val circleRadii = listOf(
+        baseRadius + 60, baseRadius + 150, baseRadius + 260,
+        baseRadius + 380, baseRadius + 500, baseRadius + 610,
+        baseRadius + 720, baseRadius + 810
+    )
 
-    for (row in 0 until totalRows) {
-        val textRadius = initialRadius * Math.pow(radiusIncrement.toDouble(), row.toDouble())
-        val angleStep = 360f / (songName.length + row * 2) // Increase spacing as row increases
+    // Draw concentric circles of text
+    for (i in circleRadii.indices) {
+        val currentRadius = circleRadii[i]
+        val paint = if (i == 0) textPaint else innerTextPaint
 
-        for (i in 0 until songName.length + row * 2) {
-            val angle = i * angleStep
-            val x = centerX + textRadius * cos(Math.toRadians(angle.toDouble())).toFloat()
-            val y = centerY + textRadius * sin(Math.toRadians(angle.toDouble())).toFloat()
+        // Calculate optimal repetitions
+        val optimalRepetitions = calculateOptimalRepetitions(currentRadius, songName, paint)
 
-            // Calculate the rotation angle for the text
-            val rotationAngle = angle + 90f // Rotate text to follow the curve
-            canvas.save()
-            canvas.rotate(rotationAngle, x.toFloat(), y.toFloat())
-            canvas.drawText(songName[i % songName.length].toString(), x.toFloat(),
-                y.toFloat(), textPaint)
-            canvas.restore()
+        // Draw the text
+        drawCircularText(canvas, centerX, centerY, currentRadius, songName, optimalRepetitions, paint)
+    }
+
+    // Clean up
+    scaledAlbumArt.recycle()
+    circularAlbumArt.recycle()
+
+    return wallpaperBitmap
+}
+
+private fun calculateOptimalRepetitions(radius: Float, text: String, paint: Paint): Int {
+    // Calculate the circumference of the circle
+    val circumference = 1.3 * Math.PI.toFloat() * radius
+
+    // Calculate how much space a single copy of the text would take
+    val textWidth = paint.measureText("$text  ")
+
+    // Calculate how many times the text would fit around the circle
+    val naturalRepetitions = (circumference / textWidth).toInt()
+
+    // Limit to natural repetitions (never more than needed to wrap the circle)
+    // Ensure at least one repetition
+    return maxOf(1, naturalRepetitions)
+}
+
+private fun drawCircularText(
+    canvas: Canvas,
+    centerX: Float,
+    centerY: Float,
+    radius: Float,
+    text: String,
+    repetitions: Int,
+    paint: Paint
+) {
+    // Create a path for the circular text
+    val path = Path().apply {
+        addCircle(centerX, centerY, radius, Path.Direction.CW)
+    }
+
+    // Create repeated text
+    val repeatedText = StringBuilder()
+    for (i in 0 until repetitions) {
+        repeatedText.append(text)
+        if (i < repetitions - 1) {
+            repeatedText.append(" ")
         }
     }
 
-    return wallpaperBitmap
+    val repeatedTextString = repeatedText.toString()
+    val repeatedTextLength = repeatedTextString.length
+
+    // Calculate the circumference of the circle
+    val circumference = 2 * Math.PI.toFloat() * radius
+
+    // Calculate spacing for the characters
+    val charSpacing = circumference / repeatedTextLength
+
+    // Calculate offset to start from the top position
+    val startOffset = -90f * radius * Math.PI.toFloat() / 90f
+
+    // Draw each character of the repeated text
+    for (i in 0 until repeatedTextLength) {
+        val char = repeatedTextString[i].toString()
+
+        // Calculate the position along the path
+        val offset = startOffset + (i * charSpacing)
+
+        // Draw the character
+        canvas.drawTextOnPath(char, path, offset, 0f, paint)
+    }
 }

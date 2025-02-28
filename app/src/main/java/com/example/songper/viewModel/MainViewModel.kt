@@ -45,6 +45,8 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 
+
+
     object WallpaperUtil {
 
             class ColorExtractor {
@@ -316,7 +318,7 @@ import java.util.concurrent.TimeUnit
             var currentlyPlaying by mutableStateOf<CurrentlyPlaying?>(null)
                 private set
 
-            private const val DEFAULT_POLLING_INTERVAL = 200L // 3 seconds
+            private const val DEFAULT_POLLING_INTERVAL = 100L // 3 seconds
         }
 
         private var pollingInterval = DEFAULT_POLLING_INTERVAL
@@ -328,17 +330,50 @@ import java.util.concurrent.TimeUnit
                 ?.putString("selected_design", designType)
                 ?.apply()
 
+            // Trigger wallpaper update immediately
+            updateWallpaperWithCurrentTrack()
+        }
+
+        private fun updateWallpaperWithCurrentTrack() {
             viewModelScope.launch {
                 albumArtUrl?.let { url ->
                     context?.let { ctx ->
                         try {
                             val songName = currentlyPlaying?.item?.name ?: "Unknown Song"
-                            WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, designType, songName)
-                            // Optional: Add success handling
+                            WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, selectedDesign, songName)
                         } catch (e: Exception) {
                             errorMessage = "Failed to set wallpaper: ${e.message}"
                         }
                     }
+                }
+            }
+        }
+
+        private fun startPollingCurrentTrack() {
+            pollingJob?.cancel()
+            pollingJob = viewModelScope.launch {
+                while (isActive) {
+                    try {
+                        accessToken?.let { token ->
+                            val response = SpotifyApiClient.apiService.getCurrentlyPlaying("Bearer $token")
+                            response.item?.let { track ->
+                                currentlyPlaying = CurrentlyPlaying(track, response.is_playing)
+                                albumArtUrl = track.album.images.firstOrNull()?.url
+
+                                context?.let { ctx ->
+                                    albumArtUrl?.let { url ->
+                                        if (url != lastAlbumArtUrl) {
+                                            updateWallpaperWithCurrentTrack()
+                                            lastAlbumArtUrl = url
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        errorMessage = "Failed to fetch current track: ${e.message}"
+                    }
+                    delay(pollingInterval)
                 }
             }
         }
@@ -431,35 +466,6 @@ import java.util.concurrent.TimeUnit
             }
         }
 
-        private fun startPollingCurrentTrack() {
-            pollingJob?.cancel()
-            pollingJob = viewModelScope.launch {
-                while (isActive) {
-                    try {
-                        accessToken?.let { token ->
-                            val response = SpotifyApiClient.apiService.getCurrentlyPlaying("Bearer $token")
-                            response.item?.let { track ->
-                                currentlyPlaying = CurrentlyPlaying(track, response.is_playing)
-                                albumArtUrl = track.album.images.firstOrNull()?.url
-
-                                context?.let { ctx ->
-                                    albumArtUrl?.let { url ->
-                                        if (url != lastAlbumArtUrl) {
-                                            val design = selectedDesign ?: "default"
-                                            WallpaperUtil.setCustomWallpaperFromUrl(ctx, url, design)
-                                            lastAlbumArtUrl = url
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        errorMessage = "Failed to fetch current track: ${e.message}"
-                    }
-                    delay(pollingInterval)
-                }
-            }
-        }
 
         suspend fun updateWallpaper(context: Context, imageUrl: String) {
             isSettingWallpaper = true
@@ -529,44 +535,43 @@ import java.util.concurrent.TimeUnit
     }
 
 
-    class SpotifyBackgroundWorker(
+class SpotifyBackgroundWorker(
     context: Context,
     workerParameters: WorkerParameters
 ) : CoroutineWorker(context, workerParameters) {
 
     private val apiService = SpotifyApiClient.apiService
 
-        override suspend fun doWork(): Result {
-            return withContext(Dispatchers.IO) {
-                try {
-                    val sharedPrefs = applicationContext.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
-                    val accessToken = sharedPrefs.getString("access_token", null) ?: return@withContext Result.failure()
+    override suspend fun doWork(): Result {
+        return withContext(Dispatchers.IO) {
+            try {
+                val sharedPrefs = applicationContext.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                val accessToken = sharedPrefs.getString("access_token", null) ?: return@withContext Result.failure()
+                val selectedDesign = sharedPrefs.getString("selected_design", "default") ?: "default"
 
-                    val response = apiService.getCurrentlyPlaying("Bearer $accessToken")
+                val response = apiService.getCurrentlyPlaying("Bearer $accessToken")
 
-                    response.item?.let { track ->
-                        val albumArtUrl = track.album.images.firstOrNull()?.url
+                response.item?.let { track ->
+                    val albumArtUrl = track.album.images.firstOrNull()?.url
+                    val lastAlbumArtUrl = sharedPrefs.getString("last_album_art_url", null)
 
-                        val lastAlbumArtUrl = sharedPrefs.getString("last_album_art_url", null)
-
-                        if (albumArtUrl != null && albumArtUrl != lastAlbumArtUrl) {
-                            val design = sharedPrefs.getString("selected_design", "default")
-                            WallpaperUtil.setCustomWallpaperFromUrl(applicationContext, albumArtUrl, design)
-                                .onSuccess {
-                                    sharedPrefs.edit().putString("last_album_art_url", albumArtUrl).apply()
-                                }
-                        }
+                    if (albumArtUrl != null && albumArtUrl != lastAlbumArtUrl) {
+                        val songName = track.name
+                        WallpaperUtil.setCustomWallpaperFromUrl(applicationContext, albumArtUrl, selectedDesign, songName)
+                            .onSuccess {
+                                sharedPrefs.edit().putString("last_album_art_url", albumArtUrl).apply()
+                            }
                     }
-
-                    Result.success()
-                } catch (e: Exception) {
-                    Result.failure()
                 }
+
+                Result.success()
+            } catch (e: Exception) {
+                Result.failure()
             }
         }
+    }
 
-
-        companion object {
+    companion object {
         const val WORK_NAME = "spotify_background_work"
     }
 }

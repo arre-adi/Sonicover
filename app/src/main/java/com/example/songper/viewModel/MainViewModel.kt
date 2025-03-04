@@ -31,6 +31,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Shader
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.palette.graphics.Palette
 import androidx.work.Constraints
@@ -45,9 +46,13 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 
-
-
     object WallpaperUtil {
+
+        data class GradientColors(
+            val startColor: Int,
+            val endColor: Int,
+            val isLight: Boolean
+        )
 
             class ColorExtractor {
                 data class GradientColors(
@@ -128,18 +133,19 @@ import java.util.concurrent.TimeUnit
                         displayMetrics.heightPixels,
                         songName ?: "Unknown Song"
                     )
-                    "B" -> WallpaperDesigns.createDesignB(
+
+
+
+                "B" -> {
+                    Log.d("WallpaperUtil", "Creating Design B wallpaper")
+                    WallpaperDesigns.createDesignB(
                         context,
                         albumArtBitmap,
                         displayMetrics.widthPixels,
-                        displayMetrics.heightPixels
+                        displayMetrics.heightPixels,
+                        songName ?: "Unknown Song"
                     )
-                    "C" -> WallpaperDesigns.createDesignC(
-                        context,
-                        albumArtBitmap,
-                        displayMetrics.widthPixels,
-                        displayMetrics.heightPixels
-                    )
+                }
                     else -> createDefaultWallpaperBitmap(
                         albumArtBitmap,
                         displayMetrics.widthPixels,
@@ -147,16 +153,20 @@ import java.util.concurrent.TimeUnit
                     )
                 }
 
-                wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
-                albumArtBitmap.recycle()
-                wallpaperBitmap.recycle()
-                Result.success(Unit)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+
+            Log.d("WallpaperUtil", "Wallpaper bitmap created - Size: ${wallpaperBitmap.width}x${wallpaperBitmap.height}")
+
+            wallpaperManager.setBitmap(wallpaperBitmap, null, true, WallpaperManager.FLAG_LOCK)
+            Log.d("WallpaperUtil", "Wallpaper set successfully")
+
+            albumArtBitmap.recycle()
+            wallpaperBitmap.recycle()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("WallpaperUtil", "Error setting wallpaper", e)
+            Result.failure(e)
         }
-
-
+    }
 
         private fun createDefaultWallpaperBitmap(
         albumArt: Bitmap,
@@ -228,7 +238,8 @@ import java.util.concurrent.TimeUnit
     }
 }
 
-    object WallpaperDesigns {
+
+object WallpaperDesigns {
     fun createDesignA(
         context: Context,
         albumArt: Bitmap,
@@ -247,25 +258,32 @@ import java.util.concurrent.TimeUnit
         context: Context,
         albumArt: Bitmap,
         screenWidth: Int,
-        screenHeight: Int
-    ): Bitmap = com.example.songper.Design.createDesignB(
+        screenHeight: Int,
+        songName: String
+    ): Bitmap = com.example.songper.Design.WallpaperDesignB.createDesignB(
         context,
         albumArt,
         screenWidth,
-        screenHeight
+        screenHeight,
+        songName
     )
 
     fun createDesignC(
         context: Context,
         albumArt: Bitmap,
         screenWidth: Int,
-        screenHeight: Int
-    ): Bitmap = com.example.songper.Design.createDesignC(
+        screenHeight: Int,
+        songName: String
+    ): Bitmap = com.example.songper.Design.WallpaperDesignC.createDesignC(
         context,
         albumArt,
         screenWidth,
-        screenHeight
+        screenHeight,
+        songName
     )
+}
+
+
 
     fun createCircularBitmap(source: Bitmap): Bitmap {
         val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
@@ -289,18 +307,17 @@ import java.util.concurrent.TimeUnit
 
         return output
     }
-}
+
 
 
     // ViewModel
-    class SpotifyViewModel : ViewModel() {
+    open class SpotifyViewModel : ViewModel() {
         var isLoggedIn by mutableStateOf(false)
             private set
-        var userName by mutableStateOf<String?>(null)
-            private set
-
-        var nowPlaying by mutableStateOf<String?>(null)
-            private set
+        open var userName by mutableStateOf<String?>(null)
+             set
+        open var nowPlaying by mutableStateOf<String?>(null)
+             set
         var albumArtUrl by mutableStateOf<String?>(null)
             private set
         var selectedDesign by mutableStateOf<String?>(null)
@@ -323,7 +340,7 @@ import java.util.concurrent.TimeUnit
 
         private var pollingInterval = DEFAULT_POLLING_INTERVAL
 
-        fun updateWallpaper(designType: String) {
+        open fun updateWallpaper(designType: String) {
             selectedDesign = designType
             context?.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
                 ?.edit()
@@ -378,7 +395,7 @@ import java.util.concurrent.TimeUnit
             }
         }
 
-        fun initialize(appContext: Context) {
+        open fun initialize(appContext: Context) {
             context = appContext.applicationContext
         }
 

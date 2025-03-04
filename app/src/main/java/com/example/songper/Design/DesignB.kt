@@ -4,71 +4,135 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Shader
-import com.example.songper.viewModel.WallpaperDesigns.createCircularBitmap
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Typeface
 import com.example.songper.viewModel.WallpaperUtil
-import kotlin.random.Random
 
-fun createDesignB(
-    context: Context,
-    albumArt: Bitmap,
-    screenWidth: Int,
-    screenHeight: Int
-): Bitmap {
-    val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(wallpaperBitmap)
+object WallpaperDesignB {
+    fun createDesignB(
+        context: Context,
+        albumArt: Bitmap,
+        screenWidth: Int,
+        screenHeight: Int,
+        songName: String
+    ): Bitmap {
+        val wallpaperBitmap = Bitmap.createBitmap(screenWidth, screenHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(wallpaperBitmap)
 
-    val colorExtractor = WallpaperUtil.ColorExtractor()
-    val colors = colorExtractor.extractGradientColors(albumArt)
-    val dominantColor = colors.startColor
+        // Extract colors from the album art
+        val colorExtractor = WallpaperUtil.ColorExtractor()
+        val palette = colorExtractor.extractGradientColors(albumArt)
 
-    val lightColor = Color.argb(
-        255,
-        Color.red(dominantColor) + 50,
-        Color.green(dominantColor) + 50,
-        Color.blue(dominantColor) + 50
-    )
+        // Define colors
+        val color1 = palette.startColor // Replace with your desired color
+        val color2 = Color.BLACK // Replace with your desired color
 
-    val gradient = LinearGradient(
-        0f, 0f,
-        screenWidth.toFloat(), screenHeight.toFloat(),
-        dominantColor,
-        lightColor,
-        Shader.TileMode.CLAMP
-    )
-    val backgroundPaint = Paint().apply { shader = gradient }
-    canvas.drawPaint(backgroundPaint)
+        // Define pattern size
+        val patternSize = screenWidth / 10f
+        val halfSize = patternSize / 2f
 
-    // Create red polka dots
-    val dotPaint = Paint().apply {
-        color = Color.argb(100, 255, 0, 0)  // Translucent red
-        style = Paint.Style.FILL
+        // Create paint for the pattern
+        val paint = Paint().apply {
+            style = Paint.Style.FILL
+            isAntiAlias = true
+        }
+
+        // Generate the pattern across the entire canvas
+        for (y in -1 until (screenHeight / patternSize + 2).toInt()) {
+            for (x in -1 until (screenWidth / patternSize + 2).toInt()) {
+                // Alternate offset for interlocking pattern
+                val offsetX = if (y % 2 == 0) 0f else halfSize
+
+                // Calculate position
+                val centerX = x * patternSize + offsetX
+                val centerY = y * patternSize
+
+                // Create interlocking arcs
+                paint.color = color1
+                canvas.drawArc(
+                    centerX - halfSize, centerY - halfSize, centerX + halfSize, centerY + halfSize,
+                    180f, 180f, true, paint
+                )
+
+                paint.color = color2
+                canvas.drawArc(
+                    centerX - halfSize, centerY - halfSize, centerX + halfSize, centerY + halfSize,
+                    0f, 180f, true, paint
+                )
+            }
+        }
+
+        // Draw the text in the center
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (palette.isLight) Color.BLACK else Color.WHITE
+            textSize = 60f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+        }
+
+        // Position the text like in the reference image
+        val centerX = screenWidth / 2f
+        val centerY = screenHeight / 2f
+
+        // Split the text into multiple lines if needed
+        val lines = splitTextIntoLines(songName)
+        val lineHeight = textPaint.fontSpacing
+
+        // Draw small decorative element
+        val smallDecorativePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = textPaint.color
+            textSize = 40f
+            textAlign = Paint.Align.CENTER
+        }
+
+        // Calculate vertical spacing to position text
+        var yPos = centerY - (lines.size * lineHeight / 2) + textPaint.fontMetrics.descent
+
+        for (i in lines.indices) {
+            canvas.drawText(lines[i], centerX, yPos, textPaint)
+            yPos += lineHeight
+
+            // If this is the last line, add a small decorative element below
+            if (i == lines.size - 1) {
+                canvas.drawText("*", centerX, yPos + 20f, smallDecorativePaint)
+            }
+        }
+
+        return wallpaperBitmap
     }
 
-    val dotSizes = listOf(20f, 30f, 40f, 50f)
-    val random = Random(System.currentTimeMillis())
+    private fun splitTextIntoLines(text: String): List<String> {
+        // If text is "Flowers need time to BLOOM" like in image, split at "to"
+        if (text.contains(" to ")) {
+            val parts = text.split(" to ", limit = 2)
+            return listOf(parts[0] + " need time to", parts[1])
+        }
 
-    repeat(50) {
-        val x = random.nextFloat() * screenWidth
-        val y = random.nextFloat() * screenHeight
-        val size = dotSizes[random.nextInt(dotSizes.size)]
-        canvas.drawCircle(x, y, size, dotPaint)
+        // For other texts, split at word boundaries if longer than 15 chars
+        if (text.length <= 15) return listOf(text)
+
+        val words = text.split(" ")
+        val lines = mutableListOf<String>()
+        var currentLine = ""
+
+        for (word in words) {
+            if (currentLine.isEmpty()) {
+                currentLine = word
+            } else if ((currentLine + " " + word).length <= 15) {
+                currentLine += " " + word
+            } else {
+                lines.add(currentLine)
+                currentLine = word
+            }
+        }
+
+        if (currentLine.isNotEmpty()) {
+            lines.add(currentLine)
+        }
+
+        return lines
     }
-
-    // Draw album art
-    val artSize = (screenWidth * 0.4).toInt()
-    val albumLeft = (screenWidth - artSize) / 2f
-    val albumTop = (screenHeight - artSize) / 2f
-
-    val scaledAlbumArt = Bitmap.createScaledBitmap(albumArt, artSize, artSize, true)
-    val circularAlbumArt = createCircularBitmap(scaledAlbumArt)
-
-    canvas.drawBitmap(circularAlbumArt, albumLeft, albumTop, null)
-
-    scaledAlbumArt.recycle()
-    circularAlbumArt.recycle()
-
-    return wallpaperBitmap
 }
+

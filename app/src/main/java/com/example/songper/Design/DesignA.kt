@@ -10,8 +10,6 @@ import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.Typeface
 import com.example.songper.viewModel.WallpaperUtil
-import kotlin.math.cos
-import kotlin.math.sin
 
 
 fun createDesignA(
@@ -56,6 +54,23 @@ fun createDesignA(
 
     canvas.drawBitmap(circularAlbumArt, albumLeft, albumTop, null)
 
+    // Clean up
+    scaledAlbumArt.recycle()
+    circularAlbumArt.recycle()
+
+    // Pass the wallpaperBitmap to the next function
+    return drawTextOnWallpaper(wallpaperBitmap, screenWidth, screenHeight, songName, colors)
+}
+
+private fun drawTextOnWallpaper(
+    wallpaperBitmap: Bitmap,
+    screenWidth: Int,
+    screenHeight: Int,
+    songName: String,
+    colors: WallpaperUtil.ColorExtractor.GradientColors
+): Bitmap {
+    val canvas = Canvas(wallpaperBitmap)
+
     // Define text paint based on background color
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = if (colors.isLight) Color.BLACK else Color.WHITE
@@ -74,6 +89,7 @@ fun createDesignA(
     // Calculate center points
     val centerX = screenWidth / 2f
     val centerY = screenHeight / 2f
+    val artSize = (screenWidth * 0.4).toInt()
     val baseRadius = artSize / 2f // Base radius is half the album art size
 
     // Define the radii for concentric circles
@@ -94,10 +110,6 @@ fun createDesignA(
         // Draw the text
         drawCircularText(canvas, centerX, centerY, currentRadius, songName, optimalRepetitions, paint)
     }
-
-    // Clean up
-    scaledAlbumArt.recycle()
-    circularAlbumArt.recycle()
 
     return wallpaperBitmap
 }

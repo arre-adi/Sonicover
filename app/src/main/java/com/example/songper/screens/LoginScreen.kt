@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
-import com.example.songper.viewModel.SpotifyViewModel
+import com.example.songper.viewmodel.SpotifyViewModel
 import com.example.songper.BuildConfig
 
 private const val CLIENT_ID = BuildConfig.SPOTIFY_CLIENT_ID // Replace with your Spotify Client ID

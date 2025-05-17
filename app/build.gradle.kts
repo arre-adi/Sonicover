@@ -16,18 +16,16 @@ android {
 
 
 
+        manifestPlaceholders += mapOf(
+            "redirectHostName" to "callback",
+            "redirectSchemeName" to "songper"
+        )
         applicationId = "com.example.songper"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
-
-        manifestPlaceholders += mapOf(
-            "redirectHostName" to "callback",
-            "redirectSchemeName" to "songper",
-
-            )
 
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"${project.properties["SPOTIFY_CLIENT_ID"]}\"")
 
@@ -122,5 +120,7 @@ dependencies {
 
     implementation ("androidx.work:work-runtime-ktx:2.10.0")
 
+    //Palette API
+    implementation("androidx.palette:palette:1.0.0")
 
 }

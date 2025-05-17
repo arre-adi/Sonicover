@@ -1,4 +1,4 @@
-package com.example.songper.Design
+package com.example.songper.design
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -6,12 +6,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.RectF
 import android.graphics.Typeface
-import com.example.songper.viewModel.WallpaperUtil
+import com.example.songper.colorextractor.ColorExtractor
+import com.example.songper.viewmodel.WallpaperUtil
 
-object WallpaperDesignC {
-    fun createDesignC(
+
+object WallpaperDesignD {
+    fun createDesignD(
         context: Context,
         albumArt: Bitmap,
         screenWidth: Int,
@@ -22,18 +23,15 @@ object WallpaperDesignC {
         val canvas = Canvas(wallpaperBitmap)
 
         // Extract colors from the album art
-        val colorExtractor = WallpaperUtil.ColorExtractor()
-        val palette = colorExtractor.extractGradientColors(albumArt)
+        val colorExtractor = ColorExtractor()
+        val palette = colorExtractor.extractColors (albumArt)
 
-        // Use the start and end colors from the palette
-        val backgroundColor = Color.BLACK
+        // Use black background and start color from palette
+        canvas.drawColor(Color.BLACK)
         val patternColor = palette.startColor
 
-        // Fill background
-        canvas.drawColor(backgroundColor)
-
         // Calculate pattern parameters
-        val patternSize = screenWidth / 10f  // Adjust for tighter packing
+        val patternSize = screenWidth / 10f
         val halfSize = patternSize / 2f
 
         // Create paint for the pattern
@@ -47,8 +45,8 @@ object WallpaperDesignC {
         val path = Path()
 
         // Generate the pattern across the entire canvas
-        for (y in -1 until (screenHeight / patternSize + 2).toInt()) {
-            for (x in -1 until (screenWidth / patternSize + 2).toInt()) {
+        for (y in -2 until (screenHeight / patternSize + 3).toInt()) {
+            for (x in -2 until (screenWidth / patternSize + 3).toInt()) {
                 // Alternate offset for interlocking pattern
                 val offsetX = if (y % 2 == 0) 0f else halfSize
 
@@ -56,20 +54,33 @@ object WallpaperDesignC {
                 val centerX = x * patternSize + offsetX
                 val centerY = y * patternSize
 
-                // Create curved rectangle path
+                // Create curved path
                 path.reset()
-                val rect = RectF(
-                    centerX - halfSize,
-                    centerY - halfSize,
-                    centerX + halfSize,
-                    centerY + halfSize
+
+                // Top left curve
+                path.moveTo(centerX - halfSize, centerY)
+                path.quadTo(
+                    centerX, centerY - halfSize,
+                    centerX, centerY - halfSize
                 )
 
-                // Draw curved quarter circles
-                path.arcTo(rect, 0f, 90f, false)
-                path.arcTo(rect, 90f, 90f, false)
-                path.arcTo(rect, 180f, 90f, false)
-                path.arcTo(rect, 270f, 90f, false)
+                // Top right curve
+                path.quadTo(
+                    centerX + halfSize, centerY,
+                    centerX + halfSize, centerY
+                )
+
+                // Bottom right curve
+                path.quadTo(
+                    centerX, centerY + halfSize,
+                    centerX, centerY + halfSize
+                )
+
+                // Bottom left curve
+                path.quadTo(
+                    centerX - halfSize, centerY,
+                    centerX - halfSize, centerY
+                )
 
                 path.close()
 

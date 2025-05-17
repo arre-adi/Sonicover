@@ -1,16 +1,22 @@
-package com.example.songper.viewModel
+package com.example.songper.spotifycalls
 
+import android.R
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.*
+import com.example.songper.viewmodel.WallpaperUtil
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class SpotifyForegroundService : Service() {
     private val serviceJob = Job()
@@ -29,7 +35,7 @@ class SpotifyForegroundService : Service() {
             NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Spotify Wallpaper")
                 .setContentText("Updating wallpaper based on current song")
-                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setSmallIcon(R.drawable.ic_media_play)
                 .build()
         )
     }
@@ -47,7 +53,7 @@ class SpotifyForegroundService : Service() {
         pollingJob = serviceScope.launch {
             while (isActive) {
                 try {
-                    val sharedPrefs = getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
+                    val sharedPrefs = getSharedPreferences("spotify_prefs", MODE_PRIVATE)
                     val accessToken = sharedPrefs.getString("access_token", null)
 
                     if (accessToken != null) {
@@ -87,7 +93,7 @@ class SpotifyForegroundService : Service() {
             "Spotify Wallpaper Service",
             NotificationManager.IMPORTANCE_LOW
         )
-        val notificationManager = getSystemService(NotificationManager::class.java)
+        val notificationManager = this.getSystemService(NotificationManager::class.java)
         notificationManager.createNotificationChannel(channel)
     }
 

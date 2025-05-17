@@ -45,7 +45,7 @@
         </intent-filter>
     </activity>
         <service
-            android:name=".viewModel.SpotifyForegroundService"
+            android:name=".spotifycalls.SpotifyForegroundService"
             android:enabled="true"
             android:exported="false" />
 

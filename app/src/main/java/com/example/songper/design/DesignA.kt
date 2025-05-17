@@ -1,4 +1,4 @@
-package com.example.songper.Design
+package com.example.songper.design
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -9,7 +9,8 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.Typeface
-import com.example.songper.viewModel.WallpaperUtil
+import com.example.songper.colorextractor.ColorExtractor
+import com.example.songper.viewmodel.WallpaperUtil
 
 
 fun createDesignA(
@@ -23,8 +24,8 @@ fun createDesignA(
     val canvas = Canvas(wallpaperBitmap)
 
     // Create a subtle background gradient
-    val colorExtractor = WallpaperUtil.ColorExtractor()
-    val colors = colorExtractor.extractGradientColors(albumArt)
+    val colorExtractor = ColorExtractor()
+    val colors = colorExtractor.extractColors (albumArt)
     val dominantColor = colors.startColor
 
     val lightColor = Color.argb(
@@ -67,7 +68,7 @@ private fun drawTextOnWallpaper(
     screenWidth: Int,
     screenHeight: Int,
     songName: String,
-    colors: WallpaperUtil.ColorExtractor.GradientColors
+    colors: ColorExtractor.GradientColors
 ): Bitmap {
     val canvas = Canvas(wallpaperBitmap)
 

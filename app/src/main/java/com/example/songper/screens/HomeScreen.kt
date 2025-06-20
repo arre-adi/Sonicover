@@ -1,4 +1,4 @@
-package com.example.songper.screens
+package com.example.sonicover.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,8 +36,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.songper.R
-import com.example.songper.viewmodel.SpotifyViewModel
+import com.example.sonicover.R
+import com.example.sonicover.viewmodel.SpotifyViewModel
 
 @Composable
 fun WelcomeScreen(viewModel: SpotifyViewModel) {

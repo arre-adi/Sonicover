@@ -1,4 +1,4 @@
-package com.example.songper.design
+package com.example.sonicover.design
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -7,8 +7,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
-import com.example.songper.colorextractor.ColorExtractor
-import com.example.songper.viewmodel.WallpaperUtil
+import com.example.sonicover.colorextractor.ColorExtractor
+import com.example.sonicover.viewmodel.WallpaperUtil
 
 
 object WallpaperDesignD {

@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Songper"
+rootProject.name = "Sonicover"
 include(":app")
 include(":app", ":spotify-app-remote")
 

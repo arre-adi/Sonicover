@@ -1,4 +1,4 @@
-package com.example.songper.spotifycalls
+package com.example.sonicover.spotifycalls
 
 import android.R
 import android.annotation.SuppressLint
@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import com.example.songper.viewmodel.WallpaperUtil
+import com.example.sonicover.viewmodel.WallpaperUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

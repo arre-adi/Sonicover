@@ -1,4 +1,4 @@
-package com.example.songper
+package com.example.sonicover
 
 import android.Manifest
 import android.os.Build
@@ -6,8 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import com.example.songper.screens.App
-import com.example.songper.viewmodel.SpotifyViewModel
+import com.example.sonicover.screens.App
+import com.example.sonicover.viewmodel.SpotifyViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -7,7 +7,7 @@ plugins {
 
 
 android {
-    namespace = "com.example.songper"
+    namespace = "com.example.sonicover"
     compileSdk = 35
 
     defaultConfig {
@@ -18,9 +18,9 @@ android {
 
         manifestPlaceholders += mapOf(
             "redirectHostName" to "callback",
-            "redirectSchemeName" to "songper"
+            "redirectSchemeName" to "sonicover"
         )
-        applicationId = "com.example.songper"
+        applicationId = "com.example.sonicover"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

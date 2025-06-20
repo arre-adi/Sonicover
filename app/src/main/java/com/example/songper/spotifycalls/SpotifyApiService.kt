@@ -1,4 +1,4 @@
-package com.example.songper.spotifycalls
+package com.example.sonicover.spotifycalls
 
 import CurrentlyPlaying
 import UserProfile

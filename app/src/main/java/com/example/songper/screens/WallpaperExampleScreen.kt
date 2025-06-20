@@ -1,4 +1,4 @@
-package com.example.songper.screens
+package com.example.sonicover.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
-import com.example.songper.viewmodel.SpotifyViewModel
+import com.example.sonicover.viewmodel.SpotifyViewModel
 
 
 @Composable

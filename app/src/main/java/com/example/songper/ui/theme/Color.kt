@@ -1,4 +1,4 @@
-package com.example.songper.ui.theme
+package com.example.sonicover.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

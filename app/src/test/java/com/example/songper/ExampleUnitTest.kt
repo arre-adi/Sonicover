@@ -1,4 +1,4 @@
-package com.example.songper
+package com.example.sonicover
 
 import org.junit.Test
 

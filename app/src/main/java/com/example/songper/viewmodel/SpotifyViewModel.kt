@@ -1,4 +1,4 @@
-package com.example.songper.viewmodel
+package com.example.sonicover.viewmodel
 
 import CurrentlyPlaying
 import android.content.Context
@@ -16,8 +16,8 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.example.songper.spotifycalls.SpotifyApiClient
-import com.example.songper.spotifycalls.SpotifyForegroundService
+import com.example.sonicover.spotifycalls.SpotifyApiClient
+import com.example.sonicover.spotifycalls.SpotifyForegroundService
 import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

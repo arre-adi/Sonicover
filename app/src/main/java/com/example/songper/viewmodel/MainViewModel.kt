@@ -1,4 +1,4 @@
-package com.example.songper.viewmodel
+package com.example.sonicover.viewmodel
 
 import android.app.WallpaperManager
 import android.content.Context
@@ -16,8 +16,8 @@ import android.graphics.Shader
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.songper.colorextractor.ColorExtractor
-import com.example.songper.spotifycalls.SpotifyApiClient
+import com.example.sonicover.colorextractor.ColorExtractor
+import com.example.sonicover.spotifycalls.SpotifyApiClient
 import java.net.URL
 
 
@@ -164,7 +164,7 @@ object WallpaperDesigns {
         screenWidth: Int,
         screenHeight: Int,
         songName: String
-    ): Bitmap = com.example.songper.design.createDesignA(
+    ): Bitmap = com.example.sonicover.design.createDesignA(
         context,
         albumArt,
         screenWidth,
@@ -178,7 +178,7 @@ object WallpaperDesigns {
         screenWidth: Int,
         screenHeight: Int,
         songName: String
-    ): Bitmap = com.example.songper.design.WallpaperDesignB.createDesignB(
+    ): Bitmap = com.example.sonicover.design.WallpaperDesignB.createDesignB(
         context,
         albumArt,
         screenWidth,
@@ -192,7 +192,7 @@ object WallpaperDesigns {
         screenWidth: Int,
         screenHeight: Int,
         songName: String
-    ): Bitmap = com.example.songper.design.WallpaperDesignC.createDesignC(
+    ): Bitmap = com.example.sonicover.design.WallpaperDesignC.createDesignC(
         context,
         albumArt,
         screenWidth,
@@ -200,31 +200,6 @@ object WallpaperDesigns {
         songName
     )
 }
-
-
-
-fun createCircularBitmap(source: Bitmap): Bitmap {
-        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-
-        val paint = Paint().apply {
-            isAntiAlias = true
-            color = Color.BLACK
-        }
-
-        val radius = source.width.coerceAtMost(source.height) / 2f
-        canvas.drawCircle(
-            source.width / 2f,
-            source.height / 2f,
-            radius,
-            paint
-        )
-
-        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
-        canvas.drawBitmap(source, 0f, 0f, paint)
-
-        return output
-    }
 
 
 class SpotifyBackgroundWorker(

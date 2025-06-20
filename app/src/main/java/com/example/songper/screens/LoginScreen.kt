@@ -1,4 +1,4 @@
-package com.example.songper.screens
+package com.example.sonicover.screens
 
 
 import android.app.Activity
@@ -22,11 +22,11 @@ import androidx.compose.ui.unit.dp
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
-import com.example.songper.viewmodel.SpotifyViewModel
-import com.example.songper.BuildConfig
+import com.example.sonicover.viewmodel.SpotifyViewModel
+import com.example.sonicover.BuildConfig
 
 private const val CLIENT_ID = BuildConfig.SPOTIFY_CLIENT_ID // Replace with your Spotify Client ID
-private const val REDIRECT_URI = "songper://callback" // Replace with your Redirect URI
+private const val REDIRECT_URI = "sonicover://callback" // Replace with your Redirect URI
 private const val REQUEST_CODE = 1337
 
 

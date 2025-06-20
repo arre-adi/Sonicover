@@ -1,4 +1,4 @@
-package com.example.songper.colorextractor
+package com.example.sonicover.colorextractor
 
 import android.graphics.Bitmap
 import android.graphics.Color

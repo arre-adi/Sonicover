@@ -7,8 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
-import com.example.sonicover.colorextractor.ColorExtractor
-import com.example.sonicover.viewmodel.WallpaperUtil
+import com.example.sonicover.colorextractor.GradientColorCreator
 
 
 object WallpaperDesignD {
@@ -23,8 +22,8 @@ object WallpaperDesignD {
         val canvas = Canvas(wallpaperBitmap)
 
         // Extract colors from the album art
-        val colorExtractor = ColorExtractor()
-        val palette = colorExtractor.extractColors (albumArt)
+        val GradientColorCreator = GradientColorCreator()
+        val palette = GradientColorCreator.extractColors (albumArt)
 
         // Use black background and start color from palette
         canvas.drawColor(Color.BLACK)

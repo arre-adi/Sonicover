@@ -8,8 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
-import com.example.sonicover.colorextractor.ColorExtractor
-import com.example.sonicover.viewmodel.WallpaperUtil
+import com.example.sonicover.colorextractor.GradientColorCreator
 
 object WallpaperDesignC {
     fun createDesignC(
@@ -24,8 +23,8 @@ object WallpaperDesignC {
 
         // Extract colors from the album art
 
-        val colorExtractor = ColorExtractor()
-        val palette = colorExtractor.extractColors (albumArt)
+        val GradientColorCreator = GradientColorCreator()
+        val palette = GradientColorCreator.extractColors (albumArt)
 
         // Use the start and end colors from the palette
         val backgroundColor = Color.BLACK

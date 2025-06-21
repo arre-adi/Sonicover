@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.sonicover.R
+import com.example.sonicover.colorextractor.GradientColorCreator
 import com.example.sonicover.viewmodel.SpotifyViewModel
 
 @Composable
@@ -218,4 +219,3 @@ fun App(viewModel: SpotifyViewModel) {
         LoginScreen(viewModel = viewModel)
     }
 }
-

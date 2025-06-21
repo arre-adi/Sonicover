@@ -16,7 +16,7 @@ import android.graphics.Shader
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.sonicover.colorextractor.ColorExtractor
+import com.example.sonicover.colorextractor.GradientColorCreator
 import com.example.sonicover.spotifycalls.SpotifyApiClient
 import java.net.URL
 
@@ -95,8 +95,8 @@ object WallpaperUtil {
         val canvas = Canvas(wallpaperBitmap)
 
         // Get the three gradient colors
-        val colorExtractor = ColorExtractor()
-        val colors = colorExtractor.extractColors (albumArt)
+        val GradientColorCreator = GradientColorCreator()
+        val colors = GradientColorCreator.extractColors (albumArt)
 
         // Create three-color gradient
         val gradient = LinearGradient(

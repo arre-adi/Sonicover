@@ -9,7 +9,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.Typeface
-import com.example.sonicover.colorextractor.ColorExtractor
+import com.example.sonicover.colorextractor.GradientColorCreator
 import com.example.sonicover.viewmodel.WallpaperUtil
 
 
@@ -24,8 +24,8 @@ fun createDesignA(
     val canvas = Canvas(wallpaperBitmap)
 
     // Create a subtle background gradient
-    val colorExtractor = ColorExtractor()
-    val colors = colorExtractor.extractColors (albumArt)
+    val GradientColorCreator = GradientColorCreator()
+    val colors = GradientColorCreator.extractColors (albumArt)
     val dominantColor = colors.startColor
 
     val lightColor = Color.argb(
@@ -68,7 +68,7 @@ private fun drawTextOnWallpaper(
     screenWidth: Int,
     screenHeight: Int,
     songName: String,
-    colors: ColorExtractor.GradientColors
+    colors: GradientColorCreator.GradientColors
 ): Bitmap {
     val canvas = Canvas(wallpaperBitmap)
 
